@@ -9,6 +9,9 @@ import com.jme3.asset.plugins.ClasspathLocator;
 import com.jme3.asset.plugins.FileLocator;
 import com.jme3.audio.AudioListenerState;
 import com.jme3.input.ChaseCamera;
+import com.jme3.input.KeyInput;
+import com.jme3.input.controls.ActionListener;
+import com.jme3.input.controls.KeyTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
@@ -31,9 +34,25 @@ public class App extends SimpleApplication {
 
     // Asset paths
     private static final String ASSETS_PATH = "src/main/resources/assets";
-
-    private Spatial player; // Move this here
+    private final float MOVE_SPEED = 20f;
+    private Spatial player;
     private AnimComposer composer;
+    private boolean left = false, right = false, up = false, down = false;
+    private final ActionListener actionListener = new ActionListener() {
+        @Override
+        public void onAction(String name, boolean isPressed, float tpf) {
+
+            if (isPressed) System.out.println("Key Pressed: " + name);
+
+            if (name.equals("Left")) left = isPressed;
+            if (name.equals("Right")) right = isPressed;
+            if (name.equals("Up")) up = isPressed;
+            if (name.equals("Down")) down = isPressed;
+
+            // Update animation state
+            updateAnimation();
+        }
+    };
 
     public App() {
         super(new StatsAppState(), new FlyCamAppState(), new AudioListenerState(), new DebugKeysAppState());
@@ -68,6 +87,8 @@ public class App extends SimpleApplication {
         createGrassGround();
         createCharacter();
         setupChaseCamera();
+
+        initKeys();
 
         //cam.setLocation(new Vector3f(0, 10, 20)); // Move up and back
         //cam.lookAt(new Vector3f(0, 0, 0), Vector3f.UNIT_Y); // Look at the center
@@ -120,32 +141,50 @@ public class App extends SimpleApplication {
     }
 
     public void createCharacter() {
-        // 1. Load the model
-        // Note: glb files are loaded as Spatials (which can be Nodes or Geometries)
-        player = assetManager.loadModel("Models/Humanoid/TeslaBot.glb");
-        player.setLocalScale(1.0f); // Adjust scale as needed
-        player.setLocalTranslation(0, 0, 0); // Place him on the grass
+        player = assetManager.loadModel("Models/Humanoid/BasicHumanoid.glb");
+        player.setLocalScale(1.0f);
+        player.setLocalTranslation(0, 5, 0);
+        //player.rotate(0, FastMath.PI, 0);
+        player.rotate(0, -10f, 0);
 
-        // ADD THIS LINE: Rotate the model itself 180 degrees
-        player.rotate(0, FastMath.PI, 0);
-
-        // 2. Find the Animation Composer
-        // We search the model's children because the composer is often on a sub-node
-        composer = player.getControl(AnimComposer.class);
-        if (composer == null) {
-            // Sometimes the control is on the child node (the armature)
-            composer = ((Node) player).getChild(0).getControl(AnimComposer.class);
-        }
+        // Use the helper method to search the whole model tree
+        composer = findComposer(player);
 
         if (composer != null) {
-            // 3. List available animations (helpful for debugging)
+            System.out.println("Success! Found composer on: " + composer.getSpatial().getName());
             System.out.println("Available animations: " + composer.getAnimClipsNames());
 
-            // 4. Run an animation (replace "Idle" with your actual clip name)
-            composer.setCurrentAction("Idle");
+            // Ensure "Idle" exists before playing
+            if (composer.getAnimClipsNames().contains("idle")) {
+                composer.setCurrentAction("idle");
+            } else if (!composer.getAnimClipsNames().isEmpty()) {
+                // Fallback: play the first animation found
+                String firstAnim = composer.getAnimClipsNames().iterator().next();
+                composer.setCurrentAction(firstAnim);
+            }
+        } else {
+            System.err.println("Could not find AnimComposer .glb!");
         }
 
         rootNode.attachChild(player);
+    }
+
+    /**
+     * Helper to find AnimComposer anywhere in the model's hierarchy
+     */
+    private AnimComposer findComposer(Spatial s) {
+        // Check if the current spatial has the control
+        AnimComposer control = s.getControl(AnimComposer.class);
+        if (control != null) return control;
+
+        // If it's a Node, check all of its children
+        if (s instanceof Node) {
+            for (Spatial child : ((Node) s).getChildren()) {
+                AnimComposer result = findComposer(child);
+                if (result != null) return result;
+            }
+        }
+        return null;
     }
 
     public void setupChaseCamera() {
@@ -157,7 +196,8 @@ public class App extends SimpleApplication {
         // 1. Horizontal Rotation:
         // If you see the front now, change FastMath.PI to 0.
         // If you see the side, try FastMath.HALF_PI (90 degrees).
-        chaseCam.setDefaultHorizontalRotation(FastMath.PI);
+        //chaseCam.setDefaultHorizontalRotation(FastMath.PI);
+        chaseCam.setDefaultHorizontalRotation(0);
 
         // 2. Vertical Rotation:
         // This tilts the camera down so you are looking from slightly above.
@@ -172,6 +212,69 @@ public class App extends SimpleApplication {
         // This ensures the camera stays behind the player when they turn.
         chaseCam.setTrailingEnabled(true);
         chaseCam.setChasingSensitivity(5f);
+    }
+
+    private void initKeys() {
+        inputManager.addMapping("Up", new KeyTrigger(KeyInput.KEY_W)); // Physical Z on AZERTY
+        inputManager.addMapping("Left", new KeyTrigger(KeyInput.KEY_A)); // Physical Q on AZERTY
+        inputManager.addMapping("Down", new KeyTrigger(KeyInput.KEY_S)); // Physical S
+        inputManager.addMapping("Right", new KeyTrigger(KeyInput.KEY_D)); // Physical D
+
+        inputManager.addListener(actionListener, "Left", "Right", "Up", "Down");
+    }
+
+    private void updateAnimation() {
+
+        System.out.println("Composer : " + composer);
+        if (composer == null) return;
+
+        System.out.println("Determine animation");
+
+        // Determine which animation we WANT to play
+        String desiredAnim = (up || down || left || right) ? "run" : "idle";
+
+        // Only change if it's different from the CURRENTLY playing animation
+        if (composer.getCurrentAction() == null ||
+                !composer.getCurrentAction().toString().equals(desiredAnim)) {
+
+            // Safety check: verify the model actually has this animation
+            if (composer.getAnimClipsNames().contains(desiredAnim)) {
+                composer.setCurrentAction(desiredAnim);
+                System.out.println("Currenta animation: " + desiredAnim);
+            } else {
+                System.out.println("Warning: Model is missing animation: " + desiredAnim);
+            }
+        }
+    }
+
+    @Override
+    public void simpleUpdate(float tpf) {
+        // 1. Get the camera direction, but ignore the Y (up/down) axis
+        // so the character doesn't fly into the air when looking up.
+        Vector3f camDir = cam.getDirection().clone().setY(0).normalizeLocal();
+        Vector3f camLeft = cam.getLeft().clone().setY(0).normalizeLocal();
+        Vector3f walkDirection = new Vector3f(0, 0, 0);
+
+        // 2. Calculate direction based on which keys are held
+        if (up) walkDirection.addLocal(camDir);
+        if (down) walkDirection.subtractLocal(camDir);
+        if (left) walkDirection.addLocal(camLeft);
+        if (right) walkDirection.subtractLocal(camLeft);
+
+        // 3. If any key is pressed, move and rotate
+        if (walkDirection.length() > 0) {
+            walkDirection.normalizeLocal();
+
+            // Move the player spatial
+            player.move(walkDirection.mult(MOVE_SPEED * tpf));
+
+            // Make the player face the direction they are walking
+            // We use slerp for smooth rotation (optional, but looks better)
+            com.jme3.math.Quaternion lookRotation = new com.jme3.math.Quaternion();
+            lookRotation.lookAt(walkDirection, Vector3f.UNIT_Y);
+            // player.getLocalRotation().slerp(lookRotation, 0.2f);
+            player.getLocalRotation().slerp(lookRotation, 10f * tpf);
+        }
     }
 
 
