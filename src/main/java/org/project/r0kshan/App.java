@@ -29,6 +29,23 @@ import java.nio.file.Paths;
 
 public class App extends SimpleApplication {
 
+    // Constants for sphere parameters
+    private static final int SPHERE_RADIAL_SAMPLES = 32;
+    private static final int SPHERE_ZSAMPLES = 32;
+    private static final float SPHERE_RADIUS = 2f;
+    private static final float SPHERE_ROTATION_X = 1.6f;
+    private static final float SHININESS_VALUE = 64f;
+
+    // Asset paths
+    private static final String ASSETS_PATH = "src/main/resources/assets";
+    private static final String POND_TEXTURE = "Textures/Terrain/Pond/Pond.jpg";
+    private static final String POND_NORMAL = "Textures/Terrain/Pond/Pond_normal.png";
+
+    // Grass texture paths
+    private static final String GRASS_TEXTURE = "Textures/Terrain/Grass/Grass.png";
+    private static final String GRASS_NORMAL = "Textures/Terrain/Grass/Grass_normal.png";
+    private static final float GRASS_SHININESS = 8.0f;
+
     public App() {
         super(new StatsAppState(), new FlyCamAppState(), new AudioListenerState(), new DebugKeysAppState());
     }
@@ -53,8 +70,9 @@ public class App extends SimpleApplication {
 
         Path moduleRoot = classesDir.getParent().getParent();
 
-        assetManager.registerLocator(moduleRoot.resolve("src/main/resources/assets").toString(), FileLocator.class);
-        assetManager.registerLocator(moduleRoot.resolve("src/main/resources/assets").toString(), ClasspathLocator.class);
+        String assetsPath = moduleRoot.resolve(ASSETS_PATH).toString();
+        assetManager.registerLocator(assetsPath, FileLocator.class);
+        assetManager.registerLocator(assetsPath, ClasspathLocator.class);
 
         stoneGroundTexture();
 
@@ -72,20 +90,31 @@ public class App extends SimpleApplication {
                 .setShininess(64f)
                 .build();*/
 
-        // Works (shows texture)
-        Material sphereMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-        sphereMat.setTexture("DiffuseMap", assetManager.loadTexture("Textures/Terrain/Pond/Pond.jpg"));
-        sphereMat.setTexture("NormalMap", assetManager.loadTexture("Textures/Terrain/Pond/Pond_normal.png"));
-        sphereMat.setBoolean("UseMaterialColors", true);
-        sphereMat.setColor("Diffuse", ColorRGBA.White);
-        sphereMat.setColor("Specular", ColorRGBA.White);
-        sphereMat.setFloat("Shininess", 64f);  // [0,128]
+        // Create material using MaterialBuilder
+        /*Material sphereMat = new MaterialBuilder()
+                .init(assetManager, "Common/MatDefs/Light/Lighting.j3md")
+                .setTexture("DiffuseMap", GRASS_TEXTURE)
+                .setTexture("NormalMap", GRASS_NORMAL)
+                .useMaterialColors()
+                .setDiffuseColor(ColorRGBA.White)
+                .setSpecularColor(new ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f))  // Low specular for grass
+                .setShininess(GRASS_SHININESS)  // Natural grass look
+                .build();*/
+
+        // Use jm3 asset instead of code
+        Material sphereMat = assetManager.loadMaterial("Materials/GrassMaterial.j3m");
+
+        // Set grass-specific render states
+        sphereMat.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
+        sphereMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
+
+
 
         Geometry sphereGeo = new GeometryBuilder()
-                .init(ShapeEnum.SPHERE, 32, 32, 2f)
+                .init(ShapeEnum.SPHERE, SPHERE_RADIAL_SAMPLES, SPHERE_ZSAMPLES, SPHERE_RADIUS)
                 .setLocalTranslation(0, 2, -2)
-                .setRotation(1.6f, 0, 0)
-                .setMateriel(sphereMat)
+                .setRotation(SPHERE_ROTATION_X, 0, 0)
+                .setMaterial(sphereMat)
                 .build();
 
         rootNode.attachChild(sphereGeo);
@@ -107,7 +136,7 @@ public class App extends SimpleApplication {
                 new GeometryBuilder()
                         .init(ShapeEnum.BOX, 1, 1, 1)
                         .setLocalTranslation(1, -1, 1)
-                        .setMateriel(mat1)
+                        .setMaterial(mat1)
                         .build();
 
         // create a red box straight above the blue one at (1,3,1)
@@ -120,7 +149,7 @@ public class App extends SimpleApplication {
                 new GeometryBuilder()
                         .init(ShapeEnum.BOX, 1, 1, 1)
                         .setLocalTranslation(1, 3, 1)
-                        .setMateriel(mat2)
+                        .setMaterial(mat2)
                         .build();
 
         // Create a pivot node at (0,0,0) and attach it to the root node

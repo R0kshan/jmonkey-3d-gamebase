@@ -11,23 +11,40 @@ import com.jme3.texture.Texture;
  */
 public class MaterialBuilder {
 
-    private final String USE_MATERIAL_COLORS = "UseMaterialColors";
-    private final String DIFFUSE_COLOR = "Diffuse";
-    private final String SPECULAR_COLOR = "Specular";
-
-    private final String SHININESS = "Shininess";
+    private static final String USE_MATERIAL_COLORS = "UseMaterialColors";
+    private static final String DIFFUSE_COLOR = "Diffuse";
+    private static final String SPECULAR_COLOR = "Specular";
+    private static final String SHININESS = "Shininess";
 
     private Material material;
     private AssetManager assetManager;
 
+    /**
+     * Initializes the MaterialBuilder with an AssetManager and material definition.
+     * Must be called before any other methods.
+     */
     public MaterialBuilder init(AssetManager assetManager, String defName) {
+        if (assetManager == null) {
+            throw new IllegalArgumentException("AssetManager cannot be null");
+        }
+        if (defName == null || defName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Material definition name cannot be null or empty");
+        }
+
         this.assetManager = assetManager;
-        this.material = new Material(assetManager,defName);
+        this.material = new Material(assetManager, defName);
         return this;
     }
 
+    /**
+     * Adds a color parameter to the material.
+     */
     public MaterialBuilder addColor(String color, ColorRGBA colorRGBA) {
-        this.material.setColor(color,colorRGBA);
+        ensureBuilderIsInitialized();
+        if (color == null || colorRGBA == null) {
+            throw new IllegalArgumentException("Color name and ColorRGBA cannot be null");
+        }
+        this.material.setColor(color, colorRGBA);
         return this;
     }
 
@@ -67,7 +84,20 @@ public class MaterialBuilder {
         return this;
     }
 
+    /**
+     * Builds and returns the configured Material.
+     */
     public Material build() {
+        ensureBuilderIsInitialized();
         return this.material;
+    }
+
+    /**
+     * Validates that the builder has been properly initialized.
+     */
+    private void ensureBuilderIsInitialized() {
+        if (this.material == null) {
+            throw new IllegalStateException("MaterialBuilder must be initialized with init() before use");
+        }
     }
 }
