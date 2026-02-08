@@ -1,5 +1,8 @@
 package org.project.r0kshan;
 
+import com.jme3.math.FastMath;
+import com.jme3.math.Vector2f;
+import com.jme3.scene.shape.Quad;
 import org.project.r0kshan.graphics.geometry.GeometryBuilder;
 import org.project.r0kshan.graphics.geometry.ShapeEnum;
 import org.project.r0kshan.graphics.materials.MaterialBuilder;
@@ -11,6 +14,7 @@ import com.jme3.asset.plugins.FileLocator;
 import com.jme3.asset.plugins.ClasspathLocator;
 import com.jme3.audio.AudioListenerState;
 import com.jme3.light.DirectionalLight;
+import com.jme3.light.AmbientLight;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
@@ -29,22 +33,9 @@ import java.nio.file.Paths;
 
 public class App extends SimpleApplication {
 
-    // Constants for sphere parameters
-    private static final int SPHERE_RADIAL_SAMPLES = 32;
-    private static final int SPHERE_ZSAMPLES = 32;
-    private static final float SPHERE_RADIUS = 2f;
-    private static final float SPHERE_ROTATION_X = 1.6f;
-    private static final float SHININESS_VALUE = 64f;
 
     // Asset paths
     private static final String ASSETS_PATH = "src/main/resources/assets";
-    private static final String POND_TEXTURE = "Textures/Terrain/Pond/Pond.jpg";
-    private static final String POND_NORMAL = "Textures/Terrain/Pond/Pond_normal.png";
-
-    // Grass texture paths
-    private static final String GRASS_TEXTURE = "Textures/Terrain/Grass/Grass.png";
-    private static final String GRASS_NORMAL = "Textures/Terrain/Grass/Grass_normal.png";
-    private static final float GRASS_SHININESS = 8.0f;
 
     public App() {
         super(new StatsAppState(), new FlyCamAppState(), new AudioListenerState(), new DebugKeysAppState());
@@ -59,7 +50,7 @@ public class App extends SimpleApplication {
     @Override
     public void simpleInitApp() {
 
-        Path classesDir = null;
+        Path classesDir;
         try {
             classesDir = Paths.get(
                     App.class.getProtectionDomain().getCodeSource().getLocation().toURI()
@@ -74,147 +65,58 @@ public class App extends SimpleApplication {
         assetManager.registerLocator(assetsPath, FileLocator.class);
         assetManager.registerLocator(assetsPath, ClasspathLocator.class);
 
-        stoneGroundTexture();
+        setupLighting();
+        createGrassGround();
 
-        //helloMaterial();
+        cam.setLocation(new Vector3f(0, 10, 20)); // Move up and back
+        cam.lookAt(new Vector3f(0, 0, 0), Vector3f.UNIT_Y); // Look at the center
+
     }
 
-    public void stoneGroundTexture() {
-
-        // Material loaded but shows nothing
-        /*Material sphereMat = new MaterialBuilder()
-                .init(assetManager,"MatDefs/CustomMatDef.j3md")
-                .useMaterialColors()
-                .setSpecularColor(ColorRGBA.White)
-                .setDiffuseColor(ColorRGBA.White)
-                .setShininess(64f)
-                .build();*/
-
-        // Create material using MaterialBuilder
-        /*Material sphereMat = new MaterialBuilder()
-                .init(assetManager, "Common/MatDefs/Light/Lighting.j3md")
-                .setTexture("DiffuseMap", GRASS_TEXTURE)
-                .setTexture("NormalMap", GRASS_NORMAL)
-                .useMaterialColors()
-                .setDiffuseColor(ColorRGBA.White)
-                .setSpecularColor(new ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f))  // Low specular for grass
-                .setShininess(GRASS_SHININESS)  // Natural grass look
-                .build();*/
-
-        // Use jm3 asset instead of code
-        Material sphereMat = assetManager.loadMaterial("Materials/GrassMaterial.j3m");
-
-        // Set grass-specific render states
-        sphereMat.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
-        sphereMat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
-
-
-
-        Geometry sphereGeo = new GeometryBuilder()
-                .init(ShapeEnum.SPHERE, SPHERE_RADIAL_SAMPLES, SPHERE_ZSAMPLES, SPHERE_RADIUS)
-                .setLocalTranslation(0, 2, -2)
-                .setRotation(SPHERE_ROTATION_X, 0, 0)
-                .setMaterial(sphereMat)
-                .build();
-
-        rootNode.attachChild(sphereGeo);
-
+    /**
+     * Sets up basic scene lighting
+     * Necessary to avoid black screen
+     */
+    public void setupLighting() {
+        // Add directional light (like sun)
         DirectionalLight sun = new DirectionalLight();
-        sun.setDirection(new Vector3f(1, 0, -2).normalizeLocal());
-        sun.setColor(ColorRGBA.White);
+        sun.setDirection(new Vector3f(-0.5f, -1.0f, -0.5f).normalizeLocal());
+        sun.setColor(ColorRGBA.White.mult(1.2f));  // Bright white light
         rootNode.addLight(sun);
+
+        // Add ambient light for overall brightness
+        AmbientLight ambient = new AmbientLight();
+        ambient.setColor(ColorRGBA.White.mult(0.3f));  // Subtle ambient
+        rootNode.addLight(ambient);
     }
 
-    public void helloWorld() {
-        // Create a bluebox at coordinates (1,-1,1)
-        Material mat1 = new MaterialBuilder()
-                .init(assetManager, "Common/MatDefs/Misc/Unshaded.j3md")
-                .addColor("Color", ColorRGBA.Blue)
-                .build();
+    /**
+     * Creates a large grass ground plane
+     */
+    public void createGrassGround() {
 
-        Geometry blueBox =
-                new GeometryBuilder()
-                        .init(ShapeEnum.BOX, 1, 1, 1)
-                        .setLocalTranslation(1, -1, 1)
-                        .setMaterial(mat1)
-                        .build();
+        // Create the Geometry for a grass terrain of 100x100 units
+        Quad groundQuad = new Quad(100f, 100f);
+        Geometry groundGeom = new Geometry("GrassGround", groundQuad);
 
-        // create a red box straight above the blue one at (1,3,1)
-        Material mat2 = new MaterialBuilder()
-                .init(assetManager, "Common/MatDefs/Misc/Unshaded.j3md")
-                .addColor("Color", ColorRGBA.Red)
-                .build();
+        // Load the Material instance (.j3m)
+        Material grassMat = (Material) assetManager.loadMaterial("Materials/GrassGround.j3m");
 
-        Geometry redBox =
-                new GeometryBuilder()
-                        .init(ShapeEnum.BOX, 1, 1, 1)
-                        .setLocalTranslation(1, 3, 1)
-                        .setMaterial(mat2)
-                        .build();
+        // Texture Tiling : without tiling one blade of grass will stretch across the whole floor
+        // This repeats the texture 10 times in both directions.
+        grassMat.getTextureParam("DiffuseMap").getTextureValue().setWrap(Texture.WrapMode.Repeat);
+        groundQuad.scaleTextureCoordinates(new Vector2f(10f, 10f));
 
-        // Create a pivot node at (0,0,0) and attach it to the root node
-        Node pivot = new Node("pivot");
-        rootNode.attachChild(pivot); // put this node in the scene
+        groundGeom.setMaterial(grassMat);
 
-        // Attach the two boxes to the *pivot* node. (And transitively to the root node.)
-        pivot.attachChild(blueBox);
-        pivot.attachChild(redBox);
+        // Position it
+        // Quads are vertical by default, rotate it -90 degrees on the X-axis to lay it flat
+        groundGeom.rotate(-FastMath.HALF_PI, 0, 0);
+        groundGeom.setLocalTranslation(-50, 0, 50); // Center it
 
-        // Rotate the pivot node: Note that both boxes have rotated!
-        pivot.rotate(.4f, .4f, 0f);
+
+        rootNode.attachChild(groundGeom);
     }
 
-    public void helloMaterial() {
-        /** A simple textured cube -- in good MIP map quality. */
-        Box cube1Mesh = new Box(1f, 1f, 1f);
-        Geometry cube1Geo = new Geometry("My Textured Box", cube1Mesh);
-        cube1Geo.setLocalTranslation(new Vector3f(-3f, 1.1f, 0f));
-        Material cube1Mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        Texture cube1Tex = assetManager.loadTexture("Interface/Logo/Monkey.jpg");
-        cube1Mat.setTexture("ColorMap", cube1Tex);
-        cube1Geo.setMaterial(cube1Mat);
-        rootNode.attachChild(cube1Geo);
-
-        /** A translucent/transparent texture, similar to a window frame. */
-        Box cube2Mesh = new Box(1f, 1f, 0.01f);
-        Geometry cube2Geo = new Geometry("window frame", cube2Mesh);
-        Material cube2Mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        cube2Mat.setTexture("ColorMap", assetManager.loadTexture("Textures/ColoredTex/Monkey.png"));
-        cube2Mat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);  // activate transparency
-        cube2Geo.setQueueBucket(RenderQueue.Bucket.Transparent);
-        cube2Geo.setMaterial(cube2Mat);
-        rootNode.attachChild(cube2Geo);
-
-        /* A bumpy rock with a shiny light effect. To make bumpy objects you must create a NormalMap. */
-
-
-        Material sphereMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-        sphereMat.setTexture("DiffuseMap", assetManager.loadTexture("Textures/Terrain/Pond/Pond.jpg"));
-        sphereMat.setTexture("NormalMap", assetManager.loadTexture("Textures/Terrain/Pond/Pond_normal.png"));
-        sphereMat.setBoolean("UseMaterialColors", true);
-        sphereMat.setColor("Diffuse", ColorRGBA.White);
-        sphereMat.setColor("Specular", ColorRGBA.White);
-        sphereMat.setFloat("Shininess", 64f);  // [0,128]
-
-        Sphere sphereMesh = new Sphere(32, 32, 2f);
-        sphereMesh.setTextureMode(Sphere.TextureMode.Projected); // better quality on spheres
-        Geometry sphereGeo = new Geometry("Shiny rock", sphereMesh);
-
-        TangentBinormalGenerator.generate(sphereMesh);           // for lighting effect
-
-        sphereGeo.setMaterial(sphereMat);
-        //sphereGeo.setMaterial((Material) assetManager.loadMaterial("Materials/MyCustomMaterial.j3m"));
-        sphereGeo.setLocalTranslation(0, 2, -2); // Move it a bit
-        sphereGeo.rotate(1.6f, 0, 0);          // Rotate it a bit
-
-
-        rootNode.attachChild(sphereGeo);
-
-        /** Must add a light to make the lit object visible! */
-        DirectionalLight sun = new DirectionalLight();
-        sun.setDirection(new Vector3f(1, 0, -2).normalizeLocal());
-        sun.setColor(ColorRGBA.White);
-        rootNode.addLight(sun);
-    }
 
 }

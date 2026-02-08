@@ -1,0 +1,13 @@
+Material Grass Ground : Common/MatDefs/Light/Lighting.j3md {
+    MaterialParameters {
+        // Path to the grass texture you generated earlier
+        DiffuseMap : Textures/Terrain/Grass/Grass.png
+
+        // Tells the engine to use the colors defined below
+        UseMaterialColors : true
+        Ambient : 1.0 1.0 1.0 1.0
+        Diffuse : 1.0 1.0 1.0 1.0
+        Specular : 0.1 0.1 0.1 1.0
+        Shininess : 16.0
+    }
+}
