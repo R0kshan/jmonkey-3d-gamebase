@@ -42,31 +42,31 @@ jobs:
           path: ${{ env.WORKING_DIR }}/target/
           retention-days: 1
 
-    # ===========================================
-    # STAGE 2: Quality gate
-    # ===========================================
-    build:
-      name: "Quality gate"
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+  # ===========================================
+  # STAGE 2: Quality gate
+  # ===========================================
+  quality-gate:
+    name: "Quality gate"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Set up JDK
-          uses: actions/setup-java@v4
-          with:
-            java-version: ${{ env.JAVA_VERSION }}
-            distribution: ${{ env.JAVA_DISTRIBUTION }}
-            cache: maven
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
 
-        - name: Run Checkstyle, PMD and Spotbugs
-          working-directory: ${{ env.WORKING_DIR }}
-          run: mvn clean verify -Pquality
+      - name: Run Checkstyle, PMD and Spotbugs
+        working-directory: ${{ env.WORKING_DIR }}
+        run: mvn clean verify -Pquality
 
-        # We upload the target folder so the Quality stage doesn't have to re-compile
-        - name: Upload Build Artifacts
-          uses: actions/upload-artifact@v4
-          with:
-            name: build-output
-            path: ${{ env.WORKING_DIR }}/target/
-            retention-days: 1
+      # We upload the target folder so the Quality stage doesn't have to re-compile
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: ${{ env.WORKING_DIR }}/target/
+          retention-days: 1
