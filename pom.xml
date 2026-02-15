@@ -17,6 +17,19 @@
         <jmonkey-version>3.7.0-stable</jmonkey-version>
     </properties>
 
+    <dependencyManagement>
+        <!-- Use log4j bom to ensure all related dependencies use the same version -->
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-bom</artifactId>
+                <version>2.25.3</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
 
         <!-- Utilities -->
@@ -58,6 +71,18 @@
             <version>${jmonkey-version}</version>
         </dependency>
 
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>
@@ -95,7 +120,11 @@
                             <!-- Checkstyle config embedded in the plugin -->
                             <!--<configLocation>google_checks.xml</configLocation>-->
                             <!-- Custom checkstyle config -->
-                            <configLocation>config/checkstyle/customized_google_checks.xml</configLocation>
+                            <propertyExpansion>checkstyle.config.path=${project.basedir}/config/checkstyle
+                            </propertyExpansion>
+                            <configLocation>${project.basedir}/config/checkstyle/checkstyle_checks.xml</configLocation>
+                            <suppressionsLocation>${project.basedir}/config/checkstyle/checkstyle-suppressions.xml
+                            </suppressionsLocation>
                             <consoleOutput>true</consoleOutput>
                             <failsOnError>true</failsOnError>
                             <linkXRef>false</linkXRef>
@@ -115,16 +144,20 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-pmd-plugin</artifactId>
-                        <version>3.26.0</version>
+                        <version>3.28.0</version>
                         <configuration>
                             <printFailingErrors>true</printFailingErrors>
                             <linkXRef>false</linkXRef>
 
                             <rulesets>
+                                <!-- Default rulesets -->
                                 <ruleset>/category/java/bestpractices.xml</ruleset>
                                 <ruleset>/category/java/codestyle.xml</ruleset>
                                 <ruleset>/category/java/errorprone.xml</ruleset>
                                 <ruleset>/category/java/design.xml</ruleset>
+
+                                <!-- Custom rulesets -->
+                                <ruleset>${project.basedir}/config/pmd/pmd-ruleset.xml</ruleset>
                             </rulesets>
 
                             <failOnViolation>true</failOnViolation>
