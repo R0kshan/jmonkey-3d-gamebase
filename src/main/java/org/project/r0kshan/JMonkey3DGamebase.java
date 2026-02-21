@@ -45,9 +45,10 @@ public class JMonkey3DGamebase extends SimpleApplication {
   private static final String DOWN_KEY = "Down";
   private static final String SPACE_KEY = "Space";
 
-  private static final String IDLE_ANIM = "Jump_Over_Obstacle_2";
+  private static final String IDLE_ANIM = "Idle";
   private static final String RUNNING_ANIM = "Run_03";
-  private static final String JUMP_ANIM = "Jump_and_Grab_Wall";
+  private static final String JUMP_ANIM = "Jump_Over_Obstacle";
+  private static final String MODEL = "model-anim-renamed.glb";
 
 
   private static final float MOVE_SPEED = 20f;
@@ -184,7 +185,7 @@ public class JMonkey3DGamebase extends SimpleApplication {
    * Create the character.
    */
   public void createCharacter() {
-    player = assetManager.loadModel("Models/Humanoid/Meshy_AI_Meshy_Merged_Animations.glb");
+    player = assetManager.loadModel("Models/Humanoid/" + MODEL);
     player.setLocalScale(1.0f);
     player.setLocalTranslation(0, 0, 0);
     player.rotate(0, -10f, 0);
