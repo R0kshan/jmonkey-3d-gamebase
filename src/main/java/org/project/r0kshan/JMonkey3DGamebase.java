@@ -46,11 +46,11 @@ public class JMonkey3DGamebase extends SimpleApplication {
   private static final String SPACE_KEY = "Space";
 
   private static final String IDLE_ANIM = "Jump_Over_Obstacle_2";
-    private static final String RUNNING_ANIM = "Run_03";
-    private static final String JUMP_ANIM = "Jump_and_Grab_Wall";
+  private static final String RUNNING_ANIM = "Run_03";
+  private static final String JUMP_ANIM = "Jump_and_Grab_Wall";
 
 
-    private static final float MOVE_SPEED = 20f;
+  private static final float MOVE_SPEED = 20f;
   private Spatial player;
   private AnimComposer composer;
 
@@ -58,7 +58,7 @@ public class JMonkey3DGamebase extends SimpleApplication {
   private boolean rightIsPressed;
   private boolean upIsPressed;
   private boolean downIsPressed;
-    private boolean spaceIsPressed;
+  private boolean spaceIsPressed;
 
   private final ActionListener actionListener = (name, isPressed, tpf) -> {
 
@@ -79,7 +79,7 @@ public class JMonkey3DGamebase extends SimpleApplication {
       downIsPressed = isPressed;
     }
     if (SPACE_KEY.equals(name)) {
-        spaceIsPressed = isPressed;
+      spaceIsPressed = isPressed;
     }
 
 
@@ -195,20 +195,20 @@ public class JMonkey3DGamebase extends SimpleApplication {
 
     if (composer != null) {
 
-        // 1. Wipe out any animations that started automatically
-        composer.reset();
+      // 1. Wipe out any animations that started automatically
+      composer.reset();
 
       log.info("Success! Found composer on: {}", composer.getSpatial().getName());
       log.info("Available animations: {}", composer.getAnimClipsNames());
       log.info("Available animations layers: {}", composer.getLayerNames());
 
 
-        // Ensure "Idle" exists before playing
+      // Ensure "Idle" exists before playing
       if (composer.getAnimClipsNames().contains(IDLE_ANIM)) {
         composer.setCurrentAction(IDLE_ANIM); // maps to idle
-         // composer.setCurrentAction("Idle_4"); // maps to idle
+        // composer.setCurrentAction("Idle_4"); // maps to idle
 
-          log.info("Current animation : {}", composer.getCurrentAction());
+        log.info("Current animation : {}", composer.getCurrentAction());
       }
     } else {
       log.error("Could not find AnimComposer .glb!");
@@ -284,11 +284,12 @@ public class JMonkey3DGamebase extends SimpleApplication {
     log.info("Determine animation");
 
     // Determine which animation we WANT to play
-     String desiredAnim =
-        (upIsPressed || downIsPressed || leftIsPressed || rightIsPressed) ? RUNNING_ANIM : IDLE_ANIM;
+    String desiredAnim =
+        (upIsPressed || downIsPressed || leftIsPressed || rightIsPressed) ? RUNNING_ANIM :
+            IDLE_ANIM;
     if (spaceIsPressed) {
-        log.info("Space is pressed");
-        desiredAnim = JUMP_ANIM;
+      log.info("Space is pressed");
+      desiredAnim = JUMP_ANIM;
     }
 
     // Only change if it's different from the CURRENTLY playing animation
@@ -299,7 +300,7 @@ public class JMonkey3DGamebase extends SimpleApplication {
       if (composer.getAnimClipsNames().contains(desiredAnim)) {
         composer.setCurrentAction(desiredAnim);
 
-          log.info("Current animation: {}", desiredAnim);
+        log.info("Current animation: {}", desiredAnim);
       } else {
         log.error("Error: Model is missing animation: {}", desiredAnim);
       }
