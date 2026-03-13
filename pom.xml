@@ -120,10 +120,10 @@
                             <!-- Checkstyle config embedded in the plugin -->
                             <!--<configLocation>google_checks.xml</configLocation>-->
                             <!-- Custom checkstyle config -->
-                            <propertyExpansion>checkstyle.config.path=${project.basedir}/config/checkstyle
+                            <propertyExpansion>checkstyle.config.path=config/checkstyle
                             </propertyExpansion>
-                            <configLocation>${project.basedir}/config/checkstyle/checkstyle_checks.xml</configLocation>
-                            <suppressionsLocation>${project.basedir}/config/checkstyle/checkstyle-suppressions.xml
+                            <configLocation>config/checkstyle/checkstyle_checks.xml</configLocation>
+                            <suppressionsLocation>config/checkstyle/checkstyle-suppressions.xml
                             </suppressionsLocation>
                             <consoleOutput>true</consoleOutput>
                             <failsOnError>true</failsOnError>
@@ -157,7 +157,7 @@
                                 <ruleset>/category/java/design.xml</ruleset>
 
                                 <!-- Custom rulesets -->
-                                <ruleset>${project.basedir}/config/pmd/pmd-ruleset.xml</ruleset>
+                                <ruleset>config/pmd/pmd-ruleset.xml</ruleset>
                             </rulesets>
 
                             <failOnViolation>true</failOnViolation>
@@ -193,7 +193,7 @@
                             <threshold>Low</threshold>
                             <failOnError>true</failOnError>
                             <includeTests>false</includeTests>
-                            <excludeFilterFile>${project.basedir}/config/spotbugs/exclude.xml</excludeFilterFile>
+                            <excludeFilterFile>config/spotbugs/exclude.xml</excludeFilterFile>
                             <plugins>
                                 <plugin>
                                     <groupId>com.h3xstream.findsecbugs</groupId>
