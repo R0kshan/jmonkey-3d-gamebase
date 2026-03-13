@@ -12,6 +12,47 @@ env:
   JAVA_DISTRIBUTION: 'temurin'
   WORKING_DIR: '.'
 
+inputs:
+  github_token:
+    description: 'GITHUB_TOKEN'
+    default: '${{ github.token }}'
+  workdir:
+    description: 'Working directory relative to the root directory.'
+    default: '.'
+  ### Flags for reviewdog ###
+  level:
+    description: 'Report level for reviewdog [info,warning,error]'
+    default: 'error'
+  reporter:
+    description: 'Reporter of reviewdog command [github-pr-check,github-pr-review].'
+    default: 'github-pr-check'
+  filter_mode:
+    description: |
+      Filtering mode for the reviewdog command [added,diff_context,file,nofilter].
+      Default is added.
+    default: 'added'
+  fail_level:
+    description: |
+      Fail level for reviewdog [none,any,info,warning,error]
+      Default is `none`.
+    default: 'none'
+  tool_name:
+    description: 'Tool name to use for reviewdog reporter'
+    default: 'pmd'
+  reviewdog_flags:
+    description: 'Additional reviewdog flags'
+    default: ''
+  ### Flags for PMD ###
+  src_path:
+    description: 'Specify the directory where the sources to be analyzed are stored. Default is `src/main/java`.'
+    default: 'src/main/java'
+  rulesets_path:
+    description: 'Specify the path of the PMD rule set. Default is `category/java/bestpractices.xml`.'
+    default: 'category/java/bestpractices.xml'
+  pmd_cache:
+    description: 'Enable PMD incremental analysis with cache file path (e.g., "/tmp/pmd-cache/pmd.cache"). Must be a file path, not a directory. Leave empty to disable.'
+    default: ''
+
 jobs:
   # ===========================================
   # STAGE 1: Build & Unit Test
