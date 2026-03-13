@@ -53,6 +53,7 @@ jobs:
   quality-gate:
     name: "Quality gate"
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -83,3 +84,5 @@ jobs:
           reporter: 'github-pr-review'
           rulesets_path: 'config/pmd/pmd-ruleset.xml'
           tool_name: 'pmd_reviewdog'
+          level: 'warning'
+          filter_mode: 'nofilter'
