@@ -5,7 +5,12 @@ on:
     branches: [ "**" ]
   pull_request:
     branches: [ "**" ]
-  workflow_dispatch: # To run it manually for testing
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
 
 env:
   JAVA_VERSION: '21'
@@ -34,7 +39,6 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: mvn clean test -B
 
-      # We upload the target folder so the Quality stage doesn't have to re-compile
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -43,10 +47,11 @@ jobs:
           retention-days: 1
 
   # ===========================================
-  # STAGE 2: Quality gate
+  # STAGE 2: Quality Gate
   # ===========================================
   quality-gate:
-    name: "Quality gate"
+    name: "Quality Gate"
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -59,14 +64,43 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           cache: maven
 
-      - name: Run Checkstyle, PMD and Spotbugs
-        working-directory: ${{ env.WORKING_DIR }}
-        run: mvn clean verify -Pquality
-
-      # We upload the target folder so the Quality stage doesn't have to re-compile
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
         with:
           name: build-output
           path: ${{ env.WORKING_DIR }}/target/
-          retention-days: 1
+
+      - name: Run Quality Tools
+        id: run-quality
+        working-directory: ${{ env.WORKING_DIR }}
+        # We don't use 'clean' here so we keep the downloaded artifacts
+        run: mvn verify -Pquality -DskipTests
+        continue-on-error: true
+
+      - name: Reviewdog (Checkstyle)
+        if: github.event_name == 'pull_request'
+        uses: reviewdog/action-checkstyle@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          level: warning
+          # Path to your custom config from the screenshot
+          checkstyle_config: config/checkstyle/checkstyle.xml
+          workdir: ${{ env.WORKING_DIR }}
+
+      - name: Reviewdog (PMD)
+        if: github.event_name == 'pull_request'
+        uses: reviewdog/action-pmd@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          level: warning
+          workdir: ${{ env.WORKING_DIR }}
+
+      # This ensures the workflow still fails if Maven found issues,
+      # blocking the PR from being merged.
+      - name: Check Quality Status
+        if: steps.run-quality.outcome == 'failure'
+        run: |
+          echo "Quality checks failed. Check the logs or PR comments above."
+          exit 1
