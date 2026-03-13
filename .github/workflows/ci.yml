@@ -12,7 +12,10 @@ env:
   JAVA_DISTRIBUTION: 'temurin'
   WORKING_DIR: '.'
 
-
+permissions:
+  contents: read
+  pull-requests: write  # Allows Reviewdog to post comments
+  checks: write         # Allows the "Quality Gate" status to show up
 
 jobs:
   # ===========================================
