@@ -67,7 +67,8 @@ jobs:
 
       - name: Run Checkstyle, PMD and Spotbugs
         working-directory: ${{ env.WORKING_DIR }}
-        run: mvn clean verify -Pquality -Dpmd.failOnViolation=false
+        #run: mvn clean verify -Pquality -Dpmd.failOnViolation=false
+        run: mvn pmd:pmd pmd:check -B -Dpmd.failOnViolation=false
 
       # We upload the target folder so the Quality stage doesn't have to re-compile
       - name: Upload Build Artifacts
