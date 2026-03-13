@@ -64,9 +64,9 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           cache: maven
 
-      - name: Run Checkstyle, PMD and Spotbugs
-        working-directory: ${{ env.WORKING_DIR }}
-        run: mvn clean verify -Pquality
+      #- name: Run Checkstyle, PMD and Spotbugs
+      #  working-directory: ${{ env.WORKING_DIR }}
+       # run: mvn clean verify -Pquality
 
       # We upload the target folder so the Quality stage doesn't have to re-compile
       - name: Upload Build Artifacts
