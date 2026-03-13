@@ -16,14 +16,14 @@
     <rule ref="category/java/bestpractices.xml"/>
 
     <!-- -->
-    <rule ref="category/java/bestpractices.xml/LiteralsFirstInComparisons">
+    <!--<rule ref="category/java/bestpractices.xml/LiteralsFirstInComparisons">
         <priority>3</priority>
-    </rule>
+    </rule>-->
 
     <rule ref="category/java/bestpractices.xml/GuardLogStatement">
+        <priority>3</priority>
         <properties>
             <property name="logLevels" value="trace,debug"/>
-            <priority>3</priority>
         </properties>
     </rule>
 
