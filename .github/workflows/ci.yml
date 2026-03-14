@@ -65,26 +65,35 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           cache: maven
 
-      #- name: Run Checkstyle, PMD and Spotbugs
+      # 1. Run Checkstyle
+      - name: Run Checkstyle with Reviewdog
+        uses: dbelyaev/action-checkstyle@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: 'github-pr-review'
+          checkstyle_version: "13.3.0"
+
+
+          #- name: Run Checkstyle, PMD and Spotbugs
       #  working-directory: ${{ env.WORKING_DIR }}
         #run: mvn clean verify -Pquality -Dpmd.failOnViolation=false
       #  run: mvn pmd:pmd pmd:check -B -Dpmd.failOnViolation=false
 
       # We upload the target folder so the Quality stage doesn't have to re-compile
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: ${{ env.WORKING_DIR }}/target/
-          retention-days: 1
+          #      - name: Upload Build Artifacts
+          #        uses: actions/upload-artifact@v4
+          #        with:
+          #          name: build-output
+          #          path: ${{ env.WORKING_DIR }}/target/
+          #          retention-days: 1
 
-      - name: Run PMD with Reviewdog
-        uses: kemsakurai/action-pmd@v0.1.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: 'github-pr-review'
+          #- name: Run PMD with Reviewdog
+          #  uses: kemsakurai/action-pmd@v0.1.0
+          #  with:
+          #    github_token: ${{ secrets.GITHUB_TOKEN }}
+          #    reporter: 'github-pr-review'
           #rulesets_path: 'config/pmd/pmd-ruleset.xml'
-          tool_name: 'pmd_reviewdog'
-          level: 'warning'
-          filter_mode: 'nofilter'
+          #    tool_name: 'pmd_reviewdog'
+          #    level: 'warning'
+          #    filter_mode: 'nofilter'
           #pmd_xml: target/pmd.xml
