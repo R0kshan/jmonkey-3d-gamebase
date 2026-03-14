@@ -61,6 +61,8 @@ public class Gamebase extends SimpleApplication {
   private boolean downIsPressed;
   private boolean spaceIsPressed;
 
+  private String TEST_checkstyle_violation = null;
+
   private final ActionListener actionListener = (name, isPressed, tpf) -> {
 
     if (isPressed) {
