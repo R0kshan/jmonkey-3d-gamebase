@@ -66,6 +66,21 @@ jobs:
           cache: maven
 
       # ===========================================
+      # Steps to execute on push
+      # ===========================================
+      - name: Run Checkstyle
+        working-directory: ${{ env.WORKING_DIR }}
+        run: mvn checkstyle:check -Pcheckstyle -B
+
+      - name: Run PMD
+        working-directory: ${{ env.WORKING_DIR }}
+        run: mvn pmd:check -Ppmd -B
+
+      - name: Run Spotbugs
+        working-directory: ${{ env.WORKING_DIR }}
+        run: mvn spotbugs:check -Pspotbugs -B
+
+      # ===========================================
       # Steps to execute on Pull Requests
       # ===========================================
       - name: Run Checkstyle with Reviewdog
@@ -75,12 +90,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: 'github-pr-review'
           checkstyle_version: "13.3.0"
-
-
-          #- name: Run Checkstyle, PMD and Spotbugs
-      #  working-directory: ${{ env.WORKING_DIR }}
-        #run: mvn clean verify -Pquality -Dpmd.failOnViolation=false
-      #  run: mvn pmd:pmd pmd:check -B -Dpmd.failOnViolation=false
 
       # We upload the target folder so the Quality stage doesn't have to re-compile
           #      - name: Upload Build Artifacts
