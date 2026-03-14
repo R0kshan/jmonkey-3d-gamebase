@@ -94,6 +94,17 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: mvn spotbugs:check -Pspotbugs -B
 
+      - name: Upload code quality reports
+        if: always() && github.event_name == 'push'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # Tag v7.0.0
+        with:
+          name: quality-reports
+          path: |
+            ${{ env.WORKING_DIR }}/target/site/*.html
+            ${{ env.WORKING_DIR }}/target/checkstyle-result.xml
+            ${{ env.WORKING_DIR }}/target/pmd.xml
+          retention-days: 1
+
       # ===========================================
       # Steps to execute on Pull Requests
       # ===========================================
