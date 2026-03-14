@@ -65,8 +65,11 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           cache: maven
 
-      # 1. Run Checkstyle
+      # ===========================================
+      # Steps to execute on Pull Requests
+      # ===========================================
       - name: Run Checkstyle with Reviewdog
+        if: github.event_name == 'pull_request'
         uses: dbelyaev/action-checkstyle@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
