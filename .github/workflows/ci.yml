@@ -92,7 +92,7 @@ jobs:
           reporter: 'github-pr-review'
           checkstyle_version: "13.3.0"
           checkstyle_config: ./config/checkstyle/checkstyle_checks.xml
-          level: 'warning'
+          level: 'error'
           filter_mode: 'nofilter'
 
 
