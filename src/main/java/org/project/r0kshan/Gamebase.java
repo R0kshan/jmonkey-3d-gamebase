@@ -50,7 +50,6 @@ public class Gamebase extends SimpleApplication {
   private static final String JUMP_ANIM = "Jump_Over_Obstacle";
   private static final String MODEL = "model-anim-renamed.glb";
 
-
   private static final float MOVE_SPEED = 20f;
   private Spatial player;
   private AnimComposer composer;
@@ -60,9 +59,6 @@ public class Gamebase extends SimpleApplication {
   private boolean upIsPressed;
   private boolean downIsPressed;
   private boolean spaceIsPressed;
-
-  private String TEST_checkstyle_violation = null;
-
   private final ActionListener actionListener = (name, isPressed, tpf) -> {
 
     if (isPressed) {
@@ -84,8 +80,6 @@ public class Gamebase extends SimpleApplication {
     if (SPACE_KEY.equals(name)) {
       spaceIsPressed = isPressed;
     }
-
-
     // Update animation state
     updateAnimation();
   };
@@ -97,7 +91,7 @@ public class Gamebase extends SimpleApplication {
     super(new StatsAppState(), new FlyCamAppState(), new AudioListenerState(),
         new DebugKeysAppState());
   }
-
+  
   /**
    * Main.
    *
