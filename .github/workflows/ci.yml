@@ -14,7 +14,7 @@ env:
 
 # Grant empty default permissions at the workflow level, and grant only the minimum required permissions per job
 # See : https://docs.github.com/en/actions/reference/security/secure-use#using-githubs-security-features
-permissions: { }
+#permissions: { }
 
 jobs:
   # ===========================================
