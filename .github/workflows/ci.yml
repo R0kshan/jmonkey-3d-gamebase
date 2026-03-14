@@ -95,14 +95,6 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: mvn spotbugs:check -Pspotbugs -B
 
-      # We upload the target folder so the Quality stage doesn't have to re-compile
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: ${{ env.WORKING_DIR }}/target/
-          retention-days: 1
-
       # ===========================================
       # Steps to execute on Pull Requests
       # ===========================================
