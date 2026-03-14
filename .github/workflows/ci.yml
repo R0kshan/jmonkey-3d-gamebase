@@ -95,8 +95,19 @@ jobs:
           level: 'error'
           filter_mode: 'nofilter'
 
+      - name: Run PMD with Reviewdog
+        if: github.event_name == 'pull_request'
+        uses: kemsakurai/action-pmd@v0.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: 'github-pr-review'
+          checkstyle_version: "13.3.0"
+          checkstyle_config: config/pmd/pmd_ruleset.xml
+          level: 'error'
+          filter_mode: 'nofilter'
 
-      # We upload the target folder so the Quality stage doesn't have to re-compile
+
+          # We upload the target folder so the Quality stage doesn't have to re-compile
           #      - name: Upload Build Artifacts
           #        uses: actions/upload-artifact@v4
           #        with:

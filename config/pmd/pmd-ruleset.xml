@@ -12,6 +12,7 @@
     <exclude-pattern>.*/generated/.*</exclude-pattern>
     <exclude-pattern>.*/generated-sources/.*</exclude-pattern>
 
+    <!-- Rulesets to apply -->
     <rule ref="category/java/errorprone.xml"/>
     <rule ref="category/java/bestpractices.xml"/>
 
