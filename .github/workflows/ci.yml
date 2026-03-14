@@ -119,4 +119,3 @@ jobs:
           checkstyle_config: config/pmd/pmd_ruleset.xml
           level: 'warning'
           filter_mode: 'nofilter'
-
