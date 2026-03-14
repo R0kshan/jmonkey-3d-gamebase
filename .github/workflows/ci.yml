@@ -92,6 +92,8 @@ jobs:
           reporter: 'github-pr-review'
           checkstyle_version: "13.3.0"
           checkstyle_config: ./config/checkstyle/checkstyle_checks.xml
+          level: 'warning'
+          filter_mode: 'nofilter'
 
 
       # We upload the target folder so the Quality stage doesn't have to re-compile
