@@ -69,14 +69,17 @@ jobs:
       # Steps to execute on push
       # ===========================================
       - name: Run Checkstyle
+        if: github.event_name == 'push'
         working-directory: ${{ env.WORKING_DIR }}
         run: mvn checkstyle:check -Pcheckstyle -B
 
       - name: Run PMD
+        if: github.event_name == 'push'
         working-directory: ${{ env.WORKING_DIR }}
         run: mvn pmd:check -Ppmd -B
 
       - name: Run Spotbugs
+        if: github.event_name == 'push'
         working-directory: ${{ env.WORKING_DIR }}
         run: mvn spotbugs:check -Pspotbugs -B
 
