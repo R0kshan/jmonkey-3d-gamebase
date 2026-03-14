@@ -36,7 +36,7 @@ import lombok.extern.log4j.Log4j2;
  * interactions.
  */
 @Log4j2
-public class JMonkey3DGamebase extends SimpleApplication {
+public class Gamebase extends SimpleApplication {
 
   private static final String ASSETS_PATH = "src/main/resources/assets";
   private static final String RIGHT_KEY = "Right";
@@ -50,7 +50,6 @@ public class JMonkey3DGamebase extends SimpleApplication {
   private static final String JUMP_ANIM = "Jump_Over_Obstacle";
   private static final String MODEL = "model-anim-renamed.glb";
 
-
   private static final float MOVE_SPEED = 20f;
   private Spatial player;
   private AnimComposer composer;
@@ -60,7 +59,6 @@ public class JMonkey3DGamebase extends SimpleApplication {
   private boolean upIsPressed;
   private boolean downIsPressed;
   private boolean spaceIsPressed;
-
   private final ActionListener actionListener = (name, isPressed, tpf) -> {
 
     if (isPressed) {
@@ -82,8 +80,6 @@ public class JMonkey3DGamebase extends SimpleApplication {
     if (SPACE_KEY.equals(name)) {
       spaceIsPressed = isPressed;
     }
-
-
     // Update animation state
     updateAnimation();
   };
@@ -91,18 +87,18 @@ public class JMonkey3DGamebase extends SimpleApplication {
   /**
    * Constructor for the main class.
    */
-  public JMonkey3DGamebase() {
+  public Gamebase() {
     super(new StatsAppState(), new FlyCamAppState(), new AudioListenerState(),
         new DebugKeysAppState());
   }
-
+  
   /**
    * Main.
    *
    * @param args main arguments
    */
   public static void main(String[] args) {
-    final JMonkey3DGamebase app = new JMonkey3DGamebase();
+    final Gamebase app = new Gamebase();
     app.start();
   }
 
@@ -113,7 +109,7 @@ public class JMonkey3DGamebase extends SimpleApplication {
     Path classesDir = null;
     try {
       classesDir = Paths.get(
-          JMonkey3DGamebase.class.getProtectionDomain().getCodeSource().getLocation().toURI()
+          Gamebase.class.getProtectionDomain().getCodeSource().getLocation().toURI()
       );
     } catch (URISyntaxException e) {
       log.fatal("Failed to resolve asset path: {0}", e.getMessage());
@@ -344,6 +340,4 @@ public class JMonkey3DGamebase extends SimpleApplication {
       player.getLocalRotation().slerp(lookRotation, 10f * tpf);
     }
   }
-
-
 }

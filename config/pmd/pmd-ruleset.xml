@@ -12,23 +12,20 @@
     <exclude-pattern>.*/generated/.*</exclude-pattern>
     <exclude-pattern>.*/generated-sources/.*</exclude-pattern>
 
+
     <rule ref="category/java/errorprone.xml"/>
-    <rule ref="category/java/bestpractices.xml"/>
-
-    <!-- -->
-    <rule ref="category/java/bestpractices.xml/LiteralsFirstInComparisons">
-        <priority>3</priority>
+    <rule ref="category/java/bestpractices.xml">
+        <!-- Old rule no longer required on recent java and log4j2 versions with the use of placeholders -->
+        <exclude name="GuardLogStatement"/>
     </rule>
 
+    <!-- Priority decreased to NO CHANGE REQUIRED because above excusion isn't working -->
     <rule ref="category/java/bestpractices.xml/GuardLogStatement">
-        <properties>
-            <property name="logLevels" value="trace,debug"/>
-            <priority>3</priority>
-        </properties>
+        <priority>5</priority>
     </rule>
 
-    <!-- Disable comment requirement as variables, as comments should not paraphrase already well named variables -->
     <rule ref="category/java/documentation.xml">
+        <!-- Disable comment requirement as variables, as comments should not paraphrase already well named variables -->
         <exclude name="CommentRequired"/>
     </rule>
 
