@@ -52,6 +52,8 @@ public class JMonkey3DGamebase extends SimpleApplication {
   private boolean upIsPressed;
   private boolean downIsPressed;
 
+  private String Test_checkstyle_violation = null;
+
   private final ActionListener actionListener = (name, isPressed, tpf) -> {
 
     if (isPressed) {
