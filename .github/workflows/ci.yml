@@ -109,7 +109,6 @@ jobs:
           level: 'warning'
           filter_mode: 'nofilter'
 
-
       - name: Run PMD with Reviewdog
         if: github.event_name == 'pull_request'
         uses: kemsakurai/action-pmd@cc44fc8bc700fdd7b0a4644365c0958a2afc4ac6 # Tag v0.1.0
