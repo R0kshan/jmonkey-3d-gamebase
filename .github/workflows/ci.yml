@@ -98,17 +98,17 @@ jobs:
       # ===========================================
       # Steps to execute on Pull Requests
       # ===========================================
-#      - name: Run Checkstyle with Reviewdog
-#        if: github.event_name == 'pull_request'
-#        uses: dbelyaev/action-checkstyle@1df550cf7ca173631075cd649bbc52cfa6549cbd # Tag v3.8.2
-#        with:
-#          github_token: ${{ secrets.GITHUB_TOKEN }}
-#          reporter: 'github-pr-review'
-#          checkstyle_version: "13.3.0"
-#          checkstyle_config: ./config/checkstyle/checkstyle_checks.xml
-#          level: 'warning'
-#          filter_mode: 'nofilter'
-#
+      - name: Run Checkstyle with Reviewdog
+        if: github.event_name == 'pull_request'
+        uses: dbelyaev/action-checkstyle@1df550cf7ca173631075cd649bbc52cfa6549cbd # Tag v3.8.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: 'github-pr-review'
+          checkstyle_version: "13.3.0"
+          checkstyle_config: ./config/checkstyle/checkstyle_checks.xml
+          level: 'warning'
+          filter_mode: 'nofilter'
+
 #      - name: Run PMD with Reviewdog
 #        if: github.event_name == 'pull_request'
 #        uses: kemsakurai/action-pmd@cc44fc8bc700fdd7b0a4644365c0958a2afc4ac6 # Tag v0.1.0
