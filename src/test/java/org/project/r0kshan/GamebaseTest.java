@@ -7,13 +7,13 @@ import junit.framework.TestSuite;
 /**
  * Unit test for simple App.
  */
-public class JMonkey3DGamebaseTest extends TestCase {
+public class GamebaseTest extends TestCase {
     /**
      * Create the test case
      *
      * @param testName name of the test case
      */
-    public JMonkey3DGamebaseTest(String testName) {
+    public GamebaseTest(String testName) {
         super(testName);
     }
 
@@ -21,7 +21,7 @@ public class JMonkey3DGamebaseTest extends TestCase {
      * @return the suite of tests being tested
      */
     public static Test suite() {
-        return new TestSuite(JMonkey3DGamebaseTest.class);
+        return new TestSuite(GamebaseTest.class);
     }
 
     /**
