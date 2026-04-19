@@ -95,7 +95,7 @@
 
     <profiles>
         <profile>
-            <id>quality</id>
+            <id>checkstyle</id>
             <activation>
                 <property>
                     <name>env.CI</name>
@@ -113,17 +113,17 @@
                             <dependency>
                                 <groupId>com.puppycrawl.tools</groupId>
                                 <artifactId>checkstyle</artifactId>
-                                <version>13.2.0</version>
+                                <version>13.3.0</version>
                             </dependency>
                         </dependencies>
                         <configuration>
                             <!-- Checkstyle config embedded in the plugin -->
                             <!--<configLocation>google_checks.xml</configLocation>-->
                             <!-- Custom checkstyle config -->
-                            <propertyExpansion>checkstyle.config.path=${project.basedir}/config/checkstyle
+                            <propertyExpansion>checkstyle.config.path=config/checkstyle
                             </propertyExpansion>
-                            <configLocation>${project.basedir}/config/checkstyle/checkstyle_checks.xml</configLocation>
-                            <suppressionsLocation>${project.basedir}/config/checkstyle/checkstyle-suppressions.xml
+                            <configLocation>config/checkstyle/checkstyle_checks.xml</configLocation>
+                            <suppressionsLocation>config/checkstyle/checkstyle-suppressions.xml
                             </suppressionsLocation>
                             <consoleOutput>true</consoleOutput>
                             <failsOnError>true</failsOnError>
@@ -131,15 +131,27 @@
                         </configuration>
                         <executions>
                             <execution>
-                                <id>validate</id>
-                                <phase>validate</phase>
+                                <id>checkstyle-check</id>
+                                <phase>verify</phase>
                                 <goals>
                                     <goal>check</goal>
                                 </goals>
                             </execution>
                         </executions>
                     </plugin>
-
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>pmd</id>
+            <activation>
+                <property>
+                    <name>env.CI</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
                     <!-- Static code analyzer to identify programming flaws -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
@@ -157,7 +169,7 @@
                                 <ruleset>/category/java/design.xml</ruleset>
 
                                 <!-- Custom rulesets -->
-                                <ruleset>${project.basedir}/config/pmd/pmd-ruleset.xml</ruleset>
+                                <ruleset>config/pmd/pmd-ruleset.xml</ruleset>
                             </rulesets>
 
                             <failOnViolation>true</failOnViolation>
@@ -174,6 +186,19 @@
                             </execution>
                         </executions>
                     </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>spotbugs</id>
+            <activation>
+                <property>
+                    <name>env.CI</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
 
                     <!-- Bytecode analysis to detect security flaws -->
                     <plugin>
@@ -193,7 +218,7 @@
                             <threshold>Low</threshold>
                             <failOnError>true</failOnError>
                             <includeTests>false</includeTests>
-                            <excludeFilterFile>${project.basedir}/config/spotbugs/exclude.xml</excludeFilterFile>
+                            <excludeFilterFile>config/spotbugs/exclude.xml</excludeFilterFile>
                             <plugins>
                                 <plugin>
                                     <groupId>com.h3xstream.findsecbugs</groupId>
