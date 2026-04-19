@@ -1,12 +1,21 @@
 # A game base for a 3D game using JMonkey
 
-# Models
+## 🟢 Status: In Development
 
-Model used : https://sketchfab.com/3d-models/humanoid-basic-animation-set-a2fc1a30e8064fdcb0384fdd7716e869
+## Context
+I started this project to learn and experiment with game development using [JMonkey Engine](https://jmonkeyengine.org/). 
 
-## Recommended IDEA plugins
+## Objective
 
-For live warnings in
+My goal for the initial development of this 3D game base is to implement the following features: 
+- Physics
+- Controls and animation for a humanoid character able to interact with the environment
+- A basic settings menu
 
-- Checkstyle
-- PMD
+> More features may be added later on, such as a randomized landscape.
+
+### Software Design Objectives 
+
+- A codebase that adheres to software design principles, as well as JMonkey Engine philosophy and best practices
+- Maintainability & Clean Code
+- Performance testing & profiling
