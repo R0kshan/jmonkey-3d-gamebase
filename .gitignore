@@ -38,5 +38,7 @@ build/
 ### VS Code ###
 .vscode/
 
-### Mac OS ###
+### AI ###
 .DS_Store
+.aider*
+!aider.conf.yml
