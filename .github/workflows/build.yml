@@ -1,16 +1,22 @@
-name: SonarQube
+name: CI
 
 on:
   push:
-    branches: [ "main", "feature/*", "fix/*" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "**" ]
     types: [opened, synchronize, reopened]
+
+# Least-privilege token; SonarCloud decorates PRs through its own GitHub App.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   JAVA_VERSION: '21'
   JAVA_DISTRIBUTION: 'temurin'
-  WORKING_DIR: '.'
 
 jobs:
   build:
@@ -37,7 +43,8 @@ jobs:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
-      - name: Build and analyze
+      # CI=true activates the checkstyle/pmd/spotbugs profiles bound to `verify`.
+      - name: Build, test, lint and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=R0kshan_jmonkey-3d-gamebase
