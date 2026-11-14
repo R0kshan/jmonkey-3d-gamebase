@@ -19,6 +19,8 @@
         <pmd.version>7.29.0</pmd.version>
         <jmonkey-version>3.7.0-stable</jmonkey-version>
         <sonar.organization>r0kshan</sonar.organization>
+        <!-- jME bootstrap/render glue: needs a display, cannot run in CI tests -->
+        <sonar.coverage.exclusions>**/Gamebase.java</sonar.coverage.exclusions>
     </properties>
 
     <dependencyManagement>
@@ -96,6 +98,25 @@
         </dependency>
 
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Coverage report consumed by Sonar (target/site/jacoco/jacoco.xml) -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.16</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
     <profiles>
         <profile>
