@@ -101,7 +101,7 @@ class PlayerAppStateTest {
     final int before = app.call(() -> bullet.getPhysicsSpace().countRigidBodies());
 
     app.call(() -> app.getStateManager().detach(player));
-    app.run(() -> { });
+    app.awaitFullFrame();
 
     assertEquals(before - 1, (int) app.call(() -> bullet.getPhysicsSpace().countRigidBodies()));
   }
