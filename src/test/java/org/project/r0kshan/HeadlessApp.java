@@ -8,6 +8,7 @@ import com.jme3.system.JmeContext;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
@@ -17,6 +18,8 @@ final class HeadlessApp extends SimpleApplication {
 
   private static final long TIMEOUT_SECONDS = 10;
   private final CountDownLatch ready = new CountDownLatch(1);
+  // Bumped by simpleUpdate, which runs after app states initialize, update and clean up
+  private final AtomicLong frames = new AtomicLong();
 
   private HeadlessApp() {
     super((AppState[]) null);
@@ -43,8 +46,7 @@ final class HeadlessApp extends SimpleApplication {
         app.getStateManager().attach(state.get());
       }
     });
-    // Attached states initialize during the following frame
-    app.run(() -> { });
+    app.awaitFullFrame();
     return app;
   }
 
@@ -52,6 +54,28 @@ final class HeadlessApp extends SimpleApplication {
   public void simpleInitApp() {
     assetManager.registerLocator("src/main/resources/assets", FileLocator.class);
     ready.countDown();
+  }
+
+  @Override
+  public void simpleUpdate(final float tpf) {
+    frames.incrementAndGet();
+  }
+
+  /**
+   * Waits until a whole frame has run after this call, so states attached or detached before
+   * it are initialized or cleaned up. Queued tasks alone are not enough: jME drains the task
+   * queue in a loop, so a follow-up task can run in the same frame, before the state manager.
+   */
+  void awaitFullFrame() throws InterruptedException {
+    // +2: the frame in progress may already be past its state update
+    final long target = frames.get() + 2;
+    final long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS);
+    while (frames.get() < target) {
+      if (System.currentTimeMillis() > deadline) {
+        throw new IllegalStateException("No frame rendered in time");
+      }
+      Thread.sleep(1);
+    }
   }
 
   /**

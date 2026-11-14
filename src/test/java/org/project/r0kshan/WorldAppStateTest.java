@@ -65,8 +65,7 @@ class WorldAppStateTest {
     final int before = app.call(() -> bullet.getPhysicsSpace().countRigidBodies());
 
     app.call(() -> app.getStateManager().detach(world));
-    // Detached states are cleaned up during the next frame
-    app.run(() -> { });
+    app.awaitFullFrame();
 
     assertEquals(4, before); // floor + 3 crates
     assertEquals(0, (int) app.call(() -> bullet.getPhysicsSpace().countRigidBodies()));
