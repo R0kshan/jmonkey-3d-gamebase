@@ -77,6 +77,13 @@
             <version>${jmonkey-version}</version>
         </dependency>
 
+        <!-- Startup settings dialog (resolution, fullscreen, vsync, anti-aliasing) -->
+        <dependency>
+            <groupId>org.jmonkeyengine</groupId>
+            <artifactId>jme3-awt-dialogs</artifactId>
+            <version>${jmonkey-version}</version>
+        </dependency>
+
         <!-- Logging -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>

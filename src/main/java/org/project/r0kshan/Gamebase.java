@@ -24,12 +24,15 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Quad;
+import com.jme3.system.AppSettings;
 import com.jme3.texture.Texture;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
+import java.util.prefs.BackingStoreException;
 import lombok.extern.log4j.Log4j2;
+import org.lwjgl.system.Configuration;
 
 /**
  * Main class for JMonkey gamebase showcasing a minimal world with basic environnemental
@@ -40,6 +43,7 @@ import lombok.extern.log4j.Log4j2;
 @SuppressWarnings("PMD.ExcessiveImports")
 public class Gamebase extends SimpleApplication {
 
+  private static final String TITLE = "Gamebase";
   private static final String ASSETS_PATH = "src/main/resources/assets";
   private static final String RIGHT_KEY = "Right";
   private static final String LEFT_KEY = "Left";
@@ -99,8 +103,35 @@ public class Gamebase extends SimpleApplication {
    *
    * @param args main arguments
    */
+  // AppSettings extends HashMap, but jME's API requires that exact type
+  @SuppressWarnings("PMD.LooseCoupling")
   public static void main(String[] args) {
+    final boolean macOs = System.getProperty("os.name").startsWith("Mac");
+    // macOS sets this variable when the JVM runs with -XstartOnFirstThread
+    final boolean firstThread = macOs && System.getenv(
+        "JAVA_STARTED_ON_FIRST_THREAD_" + ProcessHandle.current().pid()) != null;
+    // LWJGL3 on macOS normally needs -XstartOnFirstThread, which deadlocks the AWT settings
+    // dialog. The async GLFW build runs the window off the first thread, so both work.
+    if (macOs && !firstThread) {
+      Configuration.GLFW_LIBRARY_NAME.set("glfw_async");
+    }
+
+    // The dialog saves the player's choices under the title on OK; load them back here
+    final AppSettings settings = new AppSettings(true);
+    settings.setTitle(TITLE);
+    try {
+      settings.load(TITLE);
+    } catch (BackingStoreException e) {
+      log.warn("Could not load saved settings, using defaults: {}", e.getMessage());
+    }
+
     final Gamebase app = new Gamebase();
+    app.setSettings(settings);
+    if (firstThread) {
+      log.warn("Settings dialog skipped: it hangs under -XstartOnFirstThread, which is not "
+          + "needed on macOS any more");
+      app.setShowSettings(false);
+    }
     app.start();
   }
 
