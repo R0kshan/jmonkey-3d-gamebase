@@ -36,6 +36,8 @@ import lombok.extern.log4j.Log4j2;
  * interactions.
  */
 @Log4j2
+// ponytail: entry class wires the whole scene; split into AppStates when it grows
+@SuppressWarnings("PMD.ExcessiveImports")
 public class Gamebase extends SimpleApplication {
 
   private static final String ASSETS_PATH = "src/main/resources/assets";
@@ -106,18 +108,20 @@ public class Gamebase extends SimpleApplication {
   public void simpleInitApp() {
 
 
-    Path classesDir = null;
+    final Path classesDir;
     try {
       classesDir = Paths.get(
           Gamebase.class.getProtectionDomain().getCodeSource().getLocation().toURI()
       );
     } catch (URISyntaxException e) {
-      log.fatal("Failed to resolve asset path: {0}", e.getMessage());
+      log.fatal("Failed to resolve asset path: {}", e.getMessage());
       // Tells jME to shut down the display and exit the main loop cleanly
       this.stop();
+      return;
     }
 
-    final Path moduleRoot = classesDir.getParent().getParent();
+    // target/classes (or the jar) sits two levels below the module root
+    final Path moduleRoot = classesDir.resolve("../..").normalize();
 
     final String assetsPath = moduleRoot.resolve(ASSETS_PATH).toString();
     assetManager.registerLocator(assetsPath, FileLocator.class);
@@ -281,9 +285,7 @@ public class Gamebase extends SimpleApplication {
     log.info("Determine animation");
 
     // Determine which animation we WANT to play
-    String desiredAnim =
-        (upIsPressed || downIsPressed || leftIsPressed || rightIsPressed) ? RUNNING_ANIM :
-            IDLE_ANIM;
+    String desiredAnim = isMoving() ? RUNNING_ANIM : IDLE_ANIM;
     if (spaceIsPressed) {
       log.info("Space is pressed");
       desiredAnim = JUMP_ANIM;
@@ -304,8 +306,15 @@ public class Gamebase extends SimpleApplication {
     }
   }
 
+  private boolean isMoving() {
+    return upIsPressed || downIsPressed || leftIsPressed || rightIsPressed;
+  }
+
   @Override
   public void simpleUpdate(final float tpf) {
+    if (player == null) {
+      return;
+    }
     // 1. Get the camera direction, but ignore the Y (up/down) axis
     // so the character doesn't fly into the air when looking up.
     final Vector3f camDir = cam.getDirection().clone().setY(0).normalizeLocal();

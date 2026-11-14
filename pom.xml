@@ -14,8 +14,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+        <!-- JDK 23+ skips classpath annotation processors (Lombok) unless told otherwise -->
+        <maven.compiler.proc>full</maven.compiler.proc>
+        <pmd.version>7.29.0</pmd.version>
         <jmonkey-version>3.7.0-stable</jmonkey-version>
         <sonar.organization>r0kshan</sonar.organization>
+        <!-- jME bootstrap/render glue: needs a display, cannot run in CI tests -->
+        <sonar.coverage.exclusions>**/Gamebase.java</sonar.coverage.exclusions>
     </properties>
 
     <dependencyManagement>
@@ -37,7 +42,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.32</version>
+            <version>1.18.48</version>
             <scope>provided</scope>
         </dependency>
 
@@ -93,6 +98,25 @@
         </dependency>
 
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Coverage report consumed by Sonar (target/site/jacoco/jacoco.xml) -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.16</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
     <profiles>
         <profile>
@@ -158,18 +182,35 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-pmd-plugin</artifactId>
                         <version>3.28.0</version>
+                        <!-- Plugin's bundled PMD 7.17 cannot parse JDK 26 class files -->
+                        <dependencies>
+                            <dependency>
+                                <groupId>net.sourceforge.pmd</groupId>
+                                <artifactId>pmd-core</artifactId>
+                                <version>${pmd.version}</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>net.sourceforge.pmd</groupId>
+                                <artifactId>pmd-java</artifactId>
+                                <version>${pmd.version}</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>net.sourceforge.pmd</groupId>
+                                <artifactId>pmd-javascript</artifactId>
+                                <version>${pmd.version}</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>net.sourceforge.pmd</groupId>
+                                <artifactId>pmd-jsp</artifactId>
+                                <version>${pmd.version}</version>
+                            </dependency>
+                        </dependencies>
                         <configuration>
                             <printFailingErrors>true</printFailingErrors>
                             <linkXRef>false</linkXRef>
 
+                            <!-- Single ruleset: loading the categories here as well would bypass its exclusions -->
                             <rulesets>
-                                <!-- Default rulesets -->
-                                <ruleset>/category/java/bestpractices.xml</ruleset>
-                                <ruleset>/category/java/codestyle.xml</ruleset>
-                                <ruleset>/category/java/errorprone.xml</ruleset>
-                                <ruleset>/category/java/design.xml</ruleset>
-
-                                <!-- Custom rulesets -->
                                 <ruleset>config/pmd/pmd-ruleset.xml</ruleset>
                             </rulesets>
 
