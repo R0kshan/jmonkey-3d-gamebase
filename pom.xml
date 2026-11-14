@@ -17,7 +17,7 @@
         <!-- JDK 23+ skips classpath annotation processors (Lombok) unless told otherwise -->
         <maven.compiler.proc>full</maven.compiler.proc>
         <pmd.version>7.29.0</pmd.version>
-        <jmonkey-version>3.7.0-stable</jmonkey-version>
+        <jmonkey-version>3.8.1-stable</jmonkey-version>
         <sonar.organization>r0kshan</sonar.organization>
         <!-- jME bootstrap/render glue: needs a display, cannot run in CI tests -->
         <sonar.coverage.exclusions>**/Gamebase.java</sonar.coverage.exclusions>
