@@ -5,6 +5,11 @@
 ## Context
 I started this project to learn and experiment with game development using [JMonkey Engine](https://jmonkeyengine.org/). 
 
+## Run
+
+Run `org.project.r0kshan.Gamebase`. A settings dialog (resolution, fullscreen, vsync, anti-aliasing) opens first and remembers your choices.
+On macOS, do not pass `-XstartOnFirstThread`: the game no longer needs it, and with it the settings dialog is skipped.
+
 ## Objective
 
 My goal for the initial development of this 3D game base is to implement the following features: 
