@@ -32,7 +32,9 @@ import com.jme3.texture.Texture;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.prefs.BackingStoreException;
 import lombok.extern.log4j.Log4j2;
 import org.lwjgl.system.Configuration;
@@ -48,12 +50,16 @@ public class Gamebase extends SimpleApplication {
 
   private static final String TITLE = "Gamebase";
   private static final String ASSETS_PATH = "src/main/resources/assets";
-  private static final String RIGHT_KEY = "Right";
-  private static final String LEFT_KEY = "Left";
-  private static final String UP_KEY = "Up";
-  private static final String DOWN_KEY = "Down";
-  private static final String SPACE_KEY = "Space";
-  private static final String STEER_KEY = "Steer";
+  // MMO-style controls; key codes are physical positions (W = Z on AZERTY)
+  private static final String FORWARD = "Forward";
+  private static final String BACKWARD = "Backward";
+  private static final String TURN_LEFT = "TurnLeft";
+  private static final String TURN_RIGHT = "TurnRight";
+  private static final String STRAFE_LEFT = "StrafeLeft";
+  private static final String STRAFE_RIGHT = "StrafeRight";
+  private static final String JUMP = "Jump";
+  private static final String ORBIT = "Orbit"; // left mouse: camera only
+  private static final String STEER = "Steer"; // right mouse: camera and character
 
   private static final String IDLE_ANIM = "Idle";
   private static final String RUNNING_ANIM = "Run_03";
@@ -61,15 +67,15 @@ public class Gamebase extends SimpleApplication {
   private static final String MODEL = "model-anim-renamed.glb";
 
   private static final float MOVE_SPEED = 20f;
+  private static final float BACKPEDAL_FACTOR = 0.5f;
+  private static final float TURN_SPEED = FastMath.PI; // radians/second for A/D
+  private static final float CAMERA_FOLLOW_SPEED = 5f; // how fast the camera swings behind
   private Spatial player;
   private AnimComposer composer;
+  private ChaseCamera chaseCam;
 
-  private boolean leftIsPressed;
-  private boolean rightIsPressed;
-  private boolean upIsPressed;
-  private boolean downIsPressed;
-  // Right mouse held: mouse orbits the camera and the character turns to face where it looks
-  private boolean steerIsPressed;
+  // Names of the mappings currently held down
+  private final Set<String> held = new HashSet<>();
   // Seconds left in the current jump; jump plays once per press, not while held
   private float jumpTimeLeft;
   private final ActionListener actionListener = (name, isPressed, tpf) -> {
@@ -78,22 +84,12 @@ public class Gamebase extends SimpleApplication {
       log.info("Key Pressed: {}", name);
     }
 
-    if (LEFT_KEY.equals(name)) {
-      leftIsPressed = isPressed;
+    if (isPressed) {
+      held.add(name);
+    } else {
+      held.remove(name);
     }
-    if (RIGHT_KEY.equals(name)) {
-      rightIsPressed = isPressed;
-    }
-    if (UP_KEY.equals(name)) {
-      upIsPressed = isPressed;
-    }
-    if (DOWN_KEY.equals(name)) {
-      downIsPressed = isPressed;
-    }
-    if (STEER_KEY.equals(name)) {
-      steerIsPressed = isPressed;
-    }
-    if (SPACE_KEY.equals(name) && isPressed && jumpTimeLeft <= 0) {
+    if (JUMP.equals(name) && isPressed && jumpTimeLeft <= 0) {
       startJump();
     }
     // Update animation state
@@ -288,15 +284,13 @@ public class Gamebase extends SimpleApplication {
   public void setupChaseCamera() {
     flyCam.setEnabled(false);
 
-    final ChaseCamera chaseCam = new ChaseCamera(cam, player, inputManager);
+    chaseCam = new ChaseCamera(cam, player, inputManager);
     // No smooth motion: it lerps the distance back slowly, so the camera lags and drifts
     // away while the character runs. Off, it stays at the exact distance every frame.
     chaseCam.setSmoothMotion(false);
 
-    // 1. Horizontal Rotation:
-    // If you see the front now, change FastMath.PI to 0.
-    // If you see the side, try FastMath.HALF_PI (90 degrees).
-    chaseCam.setDefaultHorizontalRotation(0);
+    // 1. Horizontal Rotation: start right behind the character
+    chaseCam.setDefaultHorizontalRotation(behindAngle(forwardOf(player)));
 
     // 2. Vertical Rotation:
     // This tilts the camera down so you are looking from slightly above.
@@ -307,26 +301,30 @@ public class Gamebase extends SimpleApplication {
     chaseCam.setDefaultDistance(6f);
     chaseCam.setLookAtOffset(new Vector3f(0, 1f, 0)); // Look at head/shoulders
 
-    // 4. Mouse look only while right mouse is held (cursor hidden meanwhile); a free mouse
-    // leaves the camera alone. Trailing is off: an auto-swinging camera fights
-    // camera-relative movement, making strafe keys run the character in circles.
+    // 4. Mouse look only while a mouse button is held (cursor hidden meanwhile); a free
+    // mouse leaves the camera alone. Built-in trailing is off: simpleUpdate swings the
+    // camera behind the character itself.
     chaseCam.setDragToRotate(true);
-    chaseCam.setToggleRotationTrigger(new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
+    chaseCam.setToggleRotationTrigger(new MouseButtonTrigger(MouseInput.BUTTON_LEFT),
+        new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
     chaseCam.setTrailingEnabled(false);
   }
 
   private void initKeys() {
-    inputManager.addMapping(UP_KEY, new KeyTrigger(KeyInput.KEY_W)); // Physical Z on AZERTY
-    inputManager.addMapping(LEFT_KEY, new KeyTrigger(KeyInput.KEY_A)); // Physical Q on AZERTY
-    inputManager.addMapping(DOWN_KEY, new KeyTrigger(KeyInput.KEY_S)); // Physical S
-    inputManager.addMapping(RIGHT_KEY, new KeyTrigger(KeyInput.KEY_D)); // Physical D
-    inputManager.addMapping(SPACE_KEY, new KeyTrigger(KeyInput.KEY_SPACE));
+    inputManager.addMapping(FORWARD, new KeyTrigger(KeyInput.KEY_W));
+    inputManager.addMapping(BACKWARD, new KeyTrigger(KeyInput.KEY_S));
+    inputManager.addMapping(TURN_LEFT, new KeyTrigger(KeyInput.KEY_A));
+    inputManager.addMapping(TURN_RIGHT, new KeyTrigger(KeyInput.KEY_D));
+    inputManager.addMapping(STRAFE_LEFT, new KeyTrigger(KeyInput.KEY_Q));
+    inputManager.addMapping(STRAFE_RIGHT, new KeyTrigger(KeyInput.KEY_E));
+    inputManager.addMapping(JUMP, new KeyTrigger(KeyInput.KEY_SPACE));
 
-    // Same button the chase camera rotates on; jME lets both mappings share the trigger
-    inputManager.addMapping(STEER_KEY, new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
+    // Same buttons the chase camera rotates on; jME lets both mappings share a trigger
+    inputManager.addMapping(ORBIT, new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
+    inputManager.addMapping(STEER, new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
 
-    inputManager.addListener(actionListener, LEFT_KEY, RIGHT_KEY, UP_KEY, DOWN_KEY, SPACE_KEY,
-        STEER_KEY);
+    inputManager.addListener(actionListener, FORWARD, BACKWARD, TURN_LEFT, TURN_RIGHT,
+        STRAFE_LEFT, STRAFE_RIGHT, JUMP, ORBIT, STEER);
   }
 
   private void updateAnimation() {
@@ -370,7 +368,42 @@ public class Gamebase extends SimpleApplication {
   }
 
   private boolean isMoving() {
-    return upIsPressed || downIsPressed || leftIsPressed || rightIsPressed;
+    return movementInput().lengthSquared() > 0;
+  }
+
+  /**
+   * Movement in the character's own frame: x = left, z = forward.
+   * A/D strafe instead of turning while right mouse steers; both buttons run forward.
+   */
+  private Vector3f movementInput() {
+    final boolean steering = held.contains(STEER);
+    final Vector3f input = new Vector3f();
+    if (held.contains(FORWARD) || steering && held.contains(ORBIT)) {
+      input.z += 1;
+    }
+    if (held.contains(BACKWARD)) {
+      input.z -= 1;
+    }
+    if (held.contains(STRAFE_LEFT) || steering && held.contains(TURN_LEFT)) {
+      input.x += 1;
+    }
+    if (held.contains(STRAFE_RIGHT) || steering && held.contains(TURN_RIGHT)) {
+      input.x -= 1;
+    }
+    return input;
+  }
+
+  /** Character facing on the ground plane (models face +Z). */
+  private static Vector3f forwardOf(final Spatial spatial) {
+    return spatial.getLocalRotation().mult(Vector3f.UNIT_Z).setY(0).normalizeLocal();
+  }
+
+  /**
+   * ChaseCamera horizontal angle that puts the camera behind a character facing forward.
+   * ChaseCamera places the camera at (cos a, sin a) on the XZ plane around the target.
+   */
+  static float behindAngle(final Vector3f forward) {
+    return FastMath.atan2(-forward.z, -forward.x);
   }
 
   @Override
@@ -384,50 +417,46 @@ public class Gamebase extends SimpleApplication {
         updateAnimation(); // back to idle/run once the jump clip has played
       }
     }
-    // 1. Get the camera direction, but ignore the Y (up/down) axis
-    // so the character doesn't fly into the air when looking up.
-    final Vector3f camDir = cam.getDirection().clone().setY(0).normalizeLocal();
-    final Vector3f camLeft = cam.getLeft().clone().setY(0).normalizeLocal();
-    final Vector3f walkDirection = new Vector3f(0, 0, 0);
 
-    // 2. Calculate direction based on which keys are held
-    if (upIsPressed) {
-      walkDirection.addLocal(camDir);
+    final boolean steering = held.contains(STEER);
+    final boolean orbiting = held.contains(ORBIT) && !steering;
+
+    float turn = 0;
+    if (!steering && held.contains(TURN_LEFT)) {
+      turn += 1;
     }
-    if (downIsPressed) {
-      walkDirection.subtractLocal(camDir);
-    }
-    if (leftIsPressed) {
-      walkDirection.addLocal(camLeft);
-    }
-    if (rightIsPressed) {
-      walkDirection.subtractLocal(camLeft);
+    if (!steering && held.contains(TURN_RIGHT)) {
+      turn -= 1;
     }
 
-    // 3. Steering: the character faces where the camera looks, so A/D strafe
-    if (steerIsPressed) {
+    // 1. Facing: right mouse locks it to the camera, otherwise A/D turn the character
+    if (steering) {
+      final Vector3f camDir = cam.getDirection().clone().setY(0).normalizeLocal();
       final Quaternion steerRotation = new Quaternion();
       steerRotation.lookAt(camDir, Vector3f.UNIT_Y);
       player.setLocalRotation(steerRotation);
+    } else {
+      player.rotate(0, turn * TURN_SPEED * tpf, 0);
     }
 
-    // 4. If any key is pressed, move (and turn toward the movement unless steering)
-    if (walkDirection.length() > 0) {
-      walkDirection.normalizeLocal();
+    // 2. Move relative to the character, walking backward slower without turning around
+    final Vector3f input = movementInput();
+    final Vector3f forward = forwardOf(player);
+    if (input.lengthSquared() > 0) {
+      final Vector3f left = Vector3f.UNIT_Y.cross(forward);
+      final Vector3f walk = forward.mult(input.z).addLocal(left.mult(input.x)).normalizeLocal();
+      final float speed = input.z < 0 ? MOVE_SPEED * BACKPEDAL_FACTOR : MOVE_SPEED;
+      player.move(walk.multLocal(speed * tpf));
+    }
 
-      // Move the player spatial
-      player.move(walkDirection.mult(MOVE_SPEED * tpf));
-      if (steerIsPressed) {
-        return;
-      }
-
-      // Make the player face the direction they are walking
-      // We use slerp for smooth rotation (optional, but looks better)
-      final Quaternion lookRotation = new Quaternion();
-      lookRotation.lookAt(walkDirection, Vector3f.UNIT_Y);
-      final Quaternion rotation = player.getLocalRotation().clone();
-      rotation.slerp(lookRotation, Math.min(1f, 10f * tpf));
-      player.setLocalRotation(rotation);
+    // 3. Camera swings back behind the character once it moves or turns, unless the
+    // player is orbiting it; standing still keeps a left-drag view of the character.
+    if (!orbiting && !steering && (input.lengthSquared() > 0 || turn != 0)) {
+      final float current = chaseCam.getHorizontalRotation();
+      final float delta = FastMath.normalize(behindAngle(forward) - current,
+          -FastMath.PI, FastMath.PI);
+      chaseCam.setDefaultHorizontalRotation(
+          current + delta * Math.min(1f, CAMERA_FOLLOW_SPEED * tpf));
     }
   }
 }
