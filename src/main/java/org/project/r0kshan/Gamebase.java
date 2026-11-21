@@ -289,7 +289,9 @@ public class Gamebase extends SimpleApplication {
     flyCam.setEnabled(false);
 
     final ChaseCamera chaseCam = new ChaseCamera(cam, player, inputManager);
-    chaseCam.setSmoothMotion(true);
+    // No smooth motion: it lerps the distance back slowly, so the camera lags and drifts
+    // away while the character runs. Off, it stays at the exact distance every frame.
+    chaseCam.setSmoothMotion(false);
 
     // 1. Horizontal Rotation:
     // If you see the front now, change FastMath.PI to 0.
@@ -311,7 +313,6 @@ public class Gamebase extends SimpleApplication {
     chaseCam.setDragToRotate(true);
     chaseCam.setToggleRotationTrigger(new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
     chaseCam.setTrailingEnabled(false);
-    chaseCam.setChasingSensitivity(5f);
   }
 
   private void initKeys() {
