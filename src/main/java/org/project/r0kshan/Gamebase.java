@@ -11,8 +11,10 @@ import com.jme3.asset.plugins.FileLocator;
 import com.jme3.audio.AudioListenerState;
 import com.jme3.input.ChaseCamera;
 import com.jme3.input.KeyInput;
+import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
@@ -51,6 +53,7 @@ public class Gamebase extends SimpleApplication {
   private static final String UP_KEY = "Up";
   private static final String DOWN_KEY = "Down";
   private static final String SPACE_KEY = "Space";
+  private static final String STEER_KEY = "Steer";
 
   private static final String IDLE_ANIM = "Idle";
   private static final String RUNNING_ANIM = "Run_03";
@@ -65,6 +68,8 @@ public class Gamebase extends SimpleApplication {
   private boolean rightIsPressed;
   private boolean upIsPressed;
   private boolean downIsPressed;
+  // Right mouse held: mouse orbits the camera and the character turns to face where it looks
+  private boolean steerIsPressed;
   // Seconds left in the current jump; jump plays once per press, not while held
   private float jumpTimeLeft;
   private final ActionListener actionListener = (name, isPressed, tpf) -> {
@@ -84,6 +89,9 @@ public class Gamebase extends SimpleApplication {
     }
     if (DOWN_KEY.equals(name)) {
       downIsPressed = isPressed;
+    }
+    if (STEER_KEY.equals(name)) {
+      steerIsPressed = isPressed;
     }
     if (SPACE_KEY.equals(name) && isPressed && jumpTimeLeft <= 0) {
       startJump();
@@ -297,10 +305,11 @@ public class Gamebase extends SimpleApplication {
     chaseCam.setDefaultDistance(6f);
     chaseCam.setLookAtOffset(new Vector3f(0, 1f, 0)); // Look at head/shoulders
 
-    // 4. Mouse look: the mouse orbits the camera without holding a button (cursor hidden).
-    // Trailing is off: an auto-swinging camera fights camera-relative movement, making
-    // strafe keys run the character in circles.
-    chaseCam.setDragToRotate(false);
+    // 4. Mouse look only while right mouse is held (cursor hidden meanwhile); a free mouse
+    // leaves the camera alone. Trailing is off: an auto-swinging camera fights
+    // camera-relative movement, making strafe keys run the character in circles.
+    chaseCam.setDragToRotate(true);
+    chaseCam.setToggleRotationTrigger(new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
     chaseCam.setTrailingEnabled(false);
     chaseCam.setChasingSensitivity(5f);
   }
@@ -312,7 +321,11 @@ public class Gamebase extends SimpleApplication {
     inputManager.addMapping(RIGHT_KEY, new KeyTrigger(KeyInput.KEY_D)); // Physical D
     inputManager.addMapping(SPACE_KEY, new KeyTrigger(KeyInput.KEY_SPACE));
 
-    inputManager.addListener(actionListener, LEFT_KEY, RIGHT_KEY, UP_KEY, DOWN_KEY, SPACE_KEY);
+    // Same button the chase camera rotates on; jME lets both mappings share the trigger
+    inputManager.addMapping(STEER_KEY, new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
+
+    inputManager.addListener(actionListener, LEFT_KEY, RIGHT_KEY, UP_KEY, DOWN_KEY, SPACE_KEY,
+        STEER_KEY);
   }
 
   private void updateAnimation() {
@@ -390,12 +403,22 @@ public class Gamebase extends SimpleApplication {
       walkDirection.subtractLocal(camLeft);
     }
 
-    // 3. If any key is pressed, move and rotate
+    // 3. Steering: the character faces where the camera looks, so A/D strafe
+    if (steerIsPressed) {
+      final Quaternion steerRotation = new Quaternion();
+      steerRotation.lookAt(camDir, Vector3f.UNIT_Y);
+      player.setLocalRotation(steerRotation);
+    }
+
+    // 4. If any key is pressed, move (and turn toward the movement unless steering)
     if (walkDirection.length() > 0) {
       walkDirection.normalizeLocal();
 
       // Move the player spatial
       player.move(walkDirection.mult(MOVE_SPEED * tpf));
+      if (steerIsPressed) {
+        return;
+      }
 
       // Make the player face the direction they are walking
       // We use slerp for smooth rotation (optional, but looks better)
