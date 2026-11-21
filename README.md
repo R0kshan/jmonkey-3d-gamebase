@@ -23,4 +23,4 @@ My goal for the initial development of this 3D game base is to implement the fol
 
 - A codebase that adheres to software design principles, as well as JMonkey Engine philosophy and best practices
 - Maintainability & Clean Code
-- Performance testing & profiling
+- Performance testing & profiling (in game: F6 toggles the detailed profiler, F5 the stats overlay)

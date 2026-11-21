@@ -2,6 +2,7 @@ package org.project.r0kshan;
 
 import com.jme3.anim.AnimComposer;
 import com.jme3.app.DebugKeysAppState;
+import com.jme3.app.DetailedProfilerState;
 import com.jme3.app.FlyCamAppState;
 import com.jme3.app.SimpleApplication;
 import com.jme3.app.StatsAppState;
@@ -164,6 +165,11 @@ public class Gamebase extends SimpleApplication {
     setupChaseCamera();
 
     initKeys();
+
+    // Per-frame timings for update, render and each app state/viewport; F6 toggles it
+    final DetailedProfilerState profiler = new DetailedProfilerState();
+    profiler.setEnabled(false);
+    stateManager.attach(profiler);
 
   }
 
