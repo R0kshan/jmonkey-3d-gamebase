@@ -65,7 +65,8 @@ public class Gamebase extends SimpleApplication {
   private boolean rightIsPressed;
   private boolean upIsPressed;
   private boolean downIsPressed;
-  private boolean spaceIsPressed;
+  // Seconds left in the current jump; jump plays once per press, not while held
+  private float jumpTimeLeft;
   private final ActionListener actionListener = (name, isPressed, tpf) -> {
 
     if (isPressed) {
@@ -84,8 +85,8 @@ public class Gamebase extends SimpleApplication {
     if (DOWN_KEY.equals(name)) {
       downIsPressed = isPressed;
     }
-    if (SPACE_KEY.equals(name)) {
-      spaceIsPressed = isPressed;
+    if (SPACE_KEY.equals(name) && isPressed && jumpTimeLeft <= 0) {
+      startJump();
     }
     // Update animation state
     updateAnimation();
@@ -296,9 +297,11 @@ public class Gamebase extends SimpleApplication {
     chaseCam.setDefaultDistance(6f);
     chaseCam.setLookAtOffset(new Vector3f(0, 1f, 0)); // Look at head/shoulders
 
-    // 4. Trailing:
-    // This ensures the camera stays behind the player when they turn.
-    chaseCam.setTrailingEnabled(true);
+    // 4. Mouse look: the mouse orbits the camera without holding a button (cursor hidden).
+    // Trailing is off: an auto-swinging camera fights camera-relative movement, making
+    // strafe keys run the character in circles.
+    chaseCam.setDragToRotate(false);
+    chaseCam.setTrailingEnabled(false);
     chaseCam.setChasingSensitivity(5f);
   }
 
@@ -323,8 +326,7 @@ public class Gamebase extends SimpleApplication {
 
     // Determine which animation we WANT to play
     String desiredAnim = isMoving() ? RUNNING_ANIM : IDLE_ANIM;
-    if (spaceIsPressed) {
-      log.info("Space is pressed");
+    if (jumpTimeLeft > 0) {
       desiredAnim = JUMP_ANIM;
     }
 
@@ -343,6 +345,16 @@ public class Gamebase extends SimpleApplication {
     }
   }
 
+  private void startJump() {
+    if (composer == null || composer.getAnimClip(JUMP_ANIM) == null) {
+      return;
+    }
+    jumpTimeLeft = (float) composer.getAnimClip(JUMP_ANIM).getLength();
+    // Restart the clip from frame 0 even if it was the last action played
+    composer.setCurrentAction(JUMP_ANIM);
+    composer.setTime(0);
+  }
+
   private boolean isMoving() {
     return upIsPressed || downIsPressed || leftIsPressed || rightIsPressed;
   }
@@ -351,6 +363,12 @@ public class Gamebase extends SimpleApplication {
   public void simpleUpdate(final float tpf) {
     if (player == null) {
       return;
+    }
+    if (jumpTimeLeft > 0) {
+      jumpTimeLeft -= tpf;
+      if (jumpTimeLeft <= 0) {
+        updateAnimation(); // back to idle/run once the jump clip has played
+      }
     }
     // 1. Get the camera direction, but ignore the Y (up/down) axis
     // so the character doesn't fly into the air when looking up.
@@ -383,7 +401,9 @@ public class Gamebase extends SimpleApplication {
       // We use slerp for smooth rotation (optional, but looks better)
       final Quaternion lookRotation = new Quaternion();
       lookRotation.lookAt(walkDirection, Vector3f.UNIT_Y);
-      player.getLocalRotation().slerp(lookRotation, 10f * tpf);
+      final Quaternion rotation = player.getLocalRotation().clone();
+      rotation.slerp(lookRotation, Math.min(1f, 10f * tpf));
+      player.setLocalRotation(rotation);
     }
   }
 }
