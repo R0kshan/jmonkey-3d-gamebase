@@ -17,6 +17,8 @@
     <rule ref="category/java/codestyle.xml">
         <!-- C89-style rule: forces split declaration/initialization, conflicts with final locals -->
         <exclude name="LocalVariableDeclarationShouldBeAtStartOfBlock"/>
+        <!-- Would force empty constructors that only restate the implicit default one -->
+        <exclude name="AtLeastOneConstructor"/>
     </rule>
 
     <rule ref="category/java/bestpractices.xml">

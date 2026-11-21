@@ -8,23 +8,15 @@ import com.jme3.app.StatsAppState;
 import com.jme3.asset.plugins.ClasspathLocator;
 import com.jme3.asset.plugins.FileLocator;
 import com.jme3.audio.AudioListenerState;
+import com.jme3.bullet.BulletAppState;
+import com.jme3.bullet.control.BetterCharacterControl;
 import com.jme3.input.ChaseCamera;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
-import com.jme3.light.AmbientLight;
-import com.jme3.light.DirectionalLight;
-import com.jme3.material.Material;
-import com.jme3.math.ColorRGBA;
-import com.jme3.math.FastMath;
-import com.jme3.math.Quaternion;
-import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
-import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
-import com.jme3.scene.shape.Quad;
-import com.jme3.texture.Texture;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,8 +28,6 @@ import lombok.extern.log4j.Log4j2;
  * interactions.
  */
 @Log4j2
-// ponytail: entry class wires the whole scene; split into AppStates when it grows
-@SuppressWarnings("PMD.ExcessiveImports")
 public class Gamebase extends SimpleApplication {
 
   private static final String ASSETS_PATH = "src/main/resources/assets";
@@ -53,7 +43,14 @@ public class Gamebase extends SimpleApplication {
   private static final String MODEL = "model-anim-renamed.glb";
 
   private static final float MOVE_SPEED = 20f;
+
+  // Character capsule, in world units (meters). Tune to the model if it floats or sinks.
+  private static final float CHARACTER_RADIUS = 0.4f;
+  private static final float CHARACTER_HEIGHT = 1.8f;
+  private static final float CHARACTER_MASS = 80f;
+
   private Spatial player;
+  private BetterCharacterControl characterControl;
   private AnimComposer composer;
 
   private boolean leftIsPressed;
@@ -127,8 +124,9 @@ public class Gamebase extends SimpleApplication {
     assetManager.registerLocator(assetsPath, FileLocator.class);
     assetManager.registerLocator(assetsPath, ClasspathLocator.class);
 
-    setupLighting();
-    createGrassGround();
+    stateManager.attach(new BulletAppState());
+    stateManager.attach(new WorldAppState());
+
     createCharacter();
     setupChaseCamera();
 
@@ -137,58 +135,11 @@ public class Gamebase extends SimpleApplication {
   }
 
   /**
-   * Sets up basic scene lighting.
-   * Necessary to avoid black screen.
-   */
-  public void setupLighting() {
-    // Add directional light (like sun)
-    final DirectionalLight directionalLight = new DirectionalLight();
-    directionalLight.setDirection(new Vector3f(-0.5f, -1.0f, -0.5f).normalizeLocal());
-    directionalLight.setColor(ColorRGBA.White.mult(1.2f));  // Bright white light
-    rootNode.addLight(directionalLight);
-
-    // Add ambient light for overall brightness
-    final AmbientLight ambient = new AmbientLight();
-    ambient.setColor(ColorRGBA.White.mult(0.3f));  // Subtle ambient
-    rootNode.addLight(ambient);
-  }
-
-  /**
-   * Creates a large grass ground plane.
-   */
-  public void createGrassGround() {
-
-    // Create the Geometry for a grass terrain of 100x100 units
-    final Quad groundQuad = new Quad(100f, 100f);
-    final Geometry groundGeom = new Geometry("GrassGround", groundQuad);
-
-    // Load the Material instance (.j3m)
-    final Material grassMat = assetManager.loadMaterial("Materials/GrassGround.j3m");
-
-    // Texture Tiling : without tiling one blade of grass will stretch across the whole floor
-    // This repeats the texture 10 times in both directions.
-    grassMat.getTextureParam("DiffuseMap").getTextureValue().setWrap(Texture.WrapMode.Repeat);
-    groundQuad.scaleTextureCoordinates(new Vector2f(10f, 10f));
-
-    groundGeom.setMaterial(grassMat);
-
-    // Position it
-    // Quads are vertical by default, rotate it -90 degrees on the X-axis to lay it flat
-    groundGeom.rotate(-FastMath.HALF_PI, 0, 0);
-    groundGeom.setLocalTranslation(-50, 0, 50); // Center it
-
-
-    rootNode.attachChild(groundGeom);
-  }
-
-  /**
    * Create the character.
    */
   public void createCharacter() {
     player = assetManager.loadModel("Models/Humanoid/" + MODEL);
     player.setLocalScale(1.0f);
-    player.setLocalTranslation(0, 0, 0);
-    player.rotate(0, -10f, 0);
 
     // Use the helper method to search the whole model tree
     composer = findComposer(player);
@@ -214,6 +165,12 @@ public class Gamebase extends SimpleApplication {
     } else {
       log.error("Could not find AnimComposer .glb!");
     }
+
+    // The control owns position and facing from now on; never move the spatial directly
+    characterControl =
+        new BetterCharacterControl(CHARACTER_RADIUS, CHARACTER_HEIGHT, CHARACTER_MASS);
+    player.addControl(characterControl);
+    stateManager.getState(BulletAppState.class).getPhysicsSpace().add(characterControl);
 
     rootNode.attachChild(player);
   }
@@ -312,7 +269,7 @@ public class Gamebase extends SimpleApplication {
 
   @Override
   public void simpleUpdate(final float tpf) {
-    if (player == null) {
+    if (characterControl == null) {
       return;
     }
     // 1. Get the camera direction, but ignore the Y (up/down) axis
@@ -335,18 +292,11 @@ public class Gamebase extends SimpleApplication {
       walkDirection.subtractLocal(camLeft);
     }
 
-    // 3. If any key is pressed, move and rotate
-    if (walkDirection.length() > 0) {
+    // 3. Walk speed is in units per second; physics integrates it, so no tpf here
+    if (walkDirection.lengthSquared() > 0) {
       walkDirection.normalizeLocal();
-
-      // Move the player spatial
-      player.move(walkDirection.mult(MOVE_SPEED * tpf));
-
-      // Make the player face the direction they are walking
-      // We use slerp for smooth rotation (optional, but looks better)
-      final Quaternion lookRotation = new Quaternion();
-      lookRotation.lookAt(walkDirection, Vector3f.UNIT_Y);
-      player.getLocalRotation().slerp(lookRotation, 10f * tpf);
+      characterControl.setViewDirection(walkDirection);
     }
+    characterControl.setWalkDirection(walkDirection.multLocal(MOVE_SPEED));
   }
 }
