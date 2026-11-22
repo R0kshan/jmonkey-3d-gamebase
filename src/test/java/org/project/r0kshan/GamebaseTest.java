@@ -26,4 +26,14 @@ public class GamebaseTest extends TestCase {
           offset.add(forward).length() < EPSILON);
     }
   }
+
+  public void testTurnTowardStepsTheShortWayAndStops() {
+    // Small gap: reaches the target exactly, no lag
+    assertEquals(0.5f, Gamebase.turnToward(0.4f, 0.5f, 1f), EPSILON);
+    // Large gap: capped at maxStep
+    assertEquals(0.3f, Gamebase.turnToward(0f, 2f, 0.3f), EPSILON);
+    // Across the -PI/PI seam it turns the short way (down from 3.0 past PI), not back through 0
+    final float stepped = Gamebase.turnToward(3.0f, -3.0f, 0.1f);
+    assertEquals(3.1f, stepped, EPSILON);
+  }
 }

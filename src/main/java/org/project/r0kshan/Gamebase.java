@@ -67,7 +67,9 @@ public class Gamebase extends SimpleApplication {
 
   private static final float MOVE_SPEED = 20f;
   private static final float SPRINT_FACTOR = 1.6f;
-  private static final float FACING_TURN_SPEED = 20f; // how fast the character turns to run
+  // Max character turn rate (radians/second). A constant rate, unlike easing, keeps up
+  // exactly with any mouse turn slower than this; S still turns around in a quarter second.
+  private static final float FACING_TURN_SPEED = 4 * FastMath.PI;
   // Camera turn speed per mouse movement (ChaseCamera default is 1): raise it to turn more
   // for the same hand movement
   private static final float CAMERA_TURN_FACTOR = 3f;
@@ -414,6 +416,12 @@ public class Gamebase extends SimpleApplication {
     return FastMath.atan2(-forward.z, -forward.x);
   }
 
+  /** Steps a yaw angle toward a target the short way round, by at most maxStep radians. */
+  static float turnToward(final float yaw, final float targetYaw, final float maxStep) {
+    final float delta = FastMath.normalize(targetYaw - yaw, -FastMath.PI, FastMath.PI);
+    return yaw + FastMath.clamp(delta, -maxStep, maxStep);
+  }
+
   @Override
   public void simpleUpdate(final float tpf) {
     if (player == null) {
@@ -441,10 +449,9 @@ public class Gamebase extends SimpleApplication {
     player.move(walk.mult(speed * tpf));
 
     // 3. Turn smoothly to face the run direction
-    final Quaternion target = new Quaternion();
-    target.lookAt(walk, Vector3f.UNIT_Y);
-    final Quaternion rotation = player.getLocalRotation().clone();
-    rotation.slerp(target, Math.min(1f, FACING_TURN_SPEED * tpf));
-    player.setLocalRotation(rotation);
+    final Vector3f facing = forwardOf(player);
+    final float yaw = turnToward(FastMath.atan2(facing.x, facing.z),
+        FastMath.atan2(walk.x, walk.z), FACING_TURN_SPEED * tpf);
+    player.setLocalRotation(new Quaternion().fromAngleAxis(yaw, Vector3f.UNIT_Y));
   }
 }
