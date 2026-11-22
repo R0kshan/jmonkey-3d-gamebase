@@ -17,6 +17,16 @@ while CI fails.
 Never commit, or say a change is done, on the strength of a build that skipped one of these steps.
 If a step fails, fix the cause and run the full command again.
 
+## Design
+
+Follow [CLEAN_CODE.md](CLEAN_CODE.md). When a design problem keeps coming back (branching on
+type or state, repeated object setup, many objects talking to each other), check
+[DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) for a pattern that fits. Use one only when it solves a
+problem the code has today.
+
+For engine code, follow [JMONKEYENGINE.md](JMONKEYENGINE.md). When it is not precise enough,
+read the official jMonkeyEngine documentation or JavaDoc it links to rather than guessing.
+
 ## What counts as a meaningful unit test
 
 - It checks behaviour the feature promises, with concrete inputs and expected outputs.
