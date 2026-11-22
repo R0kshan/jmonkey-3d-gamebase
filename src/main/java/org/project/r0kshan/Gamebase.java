@@ -44,8 +44,9 @@ import org.lwjgl.system.Configuration;
  * interactions.
  */
 @Log4j2
-// ponytail: entry class wires the whole scene; split into AppStates when it grows
-@SuppressWarnings("PMD.ExcessiveImports")
+// ponytail: entry class wires the whole scene and the controls; split into AppStates when
+// it grows
+@SuppressWarnings({"PMD.ExcessiveImports", "PMD.TooManyMethods"})
 public class Gamebase extends SimpleApplication {
 
   private static final String TITLE = "Gamebase";
@@ -72,9 +73,9 @@ public class Gamebase extends SimpleApplication {
   private static final float FACING_TURN_SPEED = 6 * FastMath.PI;
   // Camera turn speed per mouse movement (ChaseCamera default is 1): raise it to turn more
   // for the same hand movement
-  private static final float CAMERA_TURN_FACTOR = 5f;
+  private static final float CAM_TURN_FACTOR = 5f;
   // Camera tilt speed while left click is held (ChaseCamera default is 1)
-  private static final float CAMERA_TILT_FACTOR = 0.5f;
+  private static final float CAM_TILT_FACTOR = 0.5f;
   private static final float CAMERA_MAX_TILT = 60f * FastMath.DEG_TO_RAD;
   private Spatial player;
   private AnimComposer composer;
@@ -293,14 +294,14 @@ public class Gamebase extends SimpleApplication {
     final ChaseCamera chaseCam = new ChaseCamera(cam, player, inputManager) {
       @Override
       protected void rotateCamera(final float value) {
-        super.rotateCamera(value * CAMERA_TURN_FACTOR);
+        super.rotateCamera(value * CAM_TURN_FACTOR);
       }
 
       @Override
       protected void vRotateCamera(final float value) {
         // Tilt stays at its default angle unless the player holds left click to adjust it
         if (held.contains(ADJUST_TILT)) {
-          super.vRotateCamera(value * CAMERA_TILT_FACTOR);
+          super.vRotateCamera(value * CAM_TILT_FACTOR);
         }
       }
     };
@@ -412,33 +413,43 @@ public class Gamebase extends SimpleApplication {
    * ChaseCamera horizontal angle that puts the camera behind a character facing forward.
    * ChaseCamera places the camera at (cos a, sin a) on the XZ plane around the target.
    */
-  static float behindAngle(final Vector3f forward) {
+  /* default */ static float behindAngle(final Vector3f forward) {
     return FastMath.atan2(-forward.z, -forward.x);
   }
 
   /** Steps a yaw angle toward a target the short way round, by at most maxStep radians. */
-  static float turnToward(final float yaw, final float targetYaw, final float maxStep) {
+  /* default */ static float turnToward(final float yaw, final float targetYaw, final float maxStep) {
     final float delta = FastMath.normalize(targetYaw - yaw, -FastMath.PI, FastMath.PI);
     return yaw + FastMath.clamp(delta, -maxStep, maxStep);
   }
 
   @Override
   public void simpleUpdate(final float tpf) {
-    if (player == null) {
-      return;
+    if (player != null) {
+      tickJump(tpf);
+      final Vector3f input = movementInput();
+      if (input.lengthSquared() > 0) {
+        moveCharacter(player, input, tpf);
+      }
     }
+  }
+
+  /** Counts down the jump clip, then goes back to idle/run. */
+  private void tickJump(final float tpf) {
     if (jumpTimeLeft > 0) {
       jumpTimeLeft -= tpf;
       if (jumpTimeLeft <= 0) {
-        updateAnimation(); // back to idle/run once the jump clip has played
+        updateAnimation();
       }
     }
+  }
 
+  /**
+   * Runs the character along the held direction, relative to the camera. Takes the character
+   * as a parameter because simpleUpdate has already checked that it isn't null.
+   */
+  private void moveCharacter(final Spatial character, final Vector3f input, final float tpf) {
     // 1. Camera directions on the ground plane, so looking up or down doesn't lift the run
-    final Vector3f input = movementInput();
-    if (input.lengthSquared() == 0) {
-      return;
-    }
     final Vector3f camForward = cam.getDirection().clone().setY(0).normalizeLocal();
     final Vector3f camLeft = cam.getLeft().clone().setY(0).normalizeLocal();
     final Vector3f walk = camForward.multLocal(input.z).addLocal(camLeft.multLocal(input.x))
@@ -446,12 +457,12 @@ public class Gamebase extends SimpleApplication {
 
     // 2. Run that way; S turns the character around toward the camera
     final float speed = held.contains(SPRINT) ? MOVE_SPEED * SPRINT_FACTOR : MOVE_SPEED;
-    player.move(walk.mult(speed * tpf));
+    character.move(walk.mult(speed * tpf));
 
     // 3. Turn smoothly to face the run direction
-    final Vector3f facing = forwardOf(player);
+    final Vector3f facing = forwardOf(character);
     final float yaw = turnToward(FastMath.atan2(facing.x, facing.z),
         FastMath.atan2(walk.x, walk.z), FACING_TURN_SPEED * tpf);
-    player.setLocalRotation(new Quaternion().fromAngleAxis(yaw, Vector3f.UNIT_Y));
+    character.setLocalRotation(new Quaternion().fromAngleAxis(yaw, Vector3f.UNIT_Y));
   }
 }
