@@ -64,8 +64,11 @@ public class Gamebase extends SimpleApplication {
 
   private static final float MOVE_SPEED = 20f;
   private static final float SPRINT_FACTOR = 1.6f;
-  private static final float FACING_TURN_SPEED = 10f; // how fast the character turns to run
-  // Camera tilt speed relative to turn speed: slight vertical slips while turning barely tilt
+  private static final float FACING_TURN_SPEED = 20f; // how fast the character turns to run
+  // Camera turn speed per mouse movement (ChaseCamera default is 1): raise it to turn more
+  // for the same hand movement
+  private static final float CAMERA_TURN_FACTOR = 3f;
+  // Camera tilt speed relative to ChaseCamera default: slight vertical slips barely tilt
   private static final float CAMERA_TILT_FACTOR = 0.4f;
   private static final float CAMERA_MAX_TILT = 60f * FastMath.DEG_TO_RAD;
   private Spatial player;
@@ -281,8 +284,13 @@ public class Gamebase extends SimpleApplication {
   public void setupChaseCamera() {
     flyCam.setEnabled(false);
 
-    // ChaseCamera shares one speed for turning and tilting; scale tilt down on its own
+    // ChaseCamera shares one speed for turning and tilting; scale each on its own
     final ChaseCamera chaseCam = new ChaseCamera(cam, player, inputManager) {
+      @Override
+      protected void rotateCamera(final float value) {
+        super.rotateCamera(value * CAMERA_TURN_FACTOR);
+      }
+
       @Override
       protected void vRotateCamera(final float value) {
         super.vRotateCamera(value * CAMERA_TILT_FACTOR);
