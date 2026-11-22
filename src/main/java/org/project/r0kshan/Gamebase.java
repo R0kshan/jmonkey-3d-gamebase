@@ -70,6 +70,9 @@ public class Gamebase extends SimpleApplication {
   private static final float BACKPEDAL_FACTOR = 0.5f;
   private static final float TURN_SPEED = FastMath.PI; // radians/second for A/D
   private static final float CAMERA_FOLLOW_SPEED = 5f; // how fast the camera swings behind
+  // Camera tilt speed relative to turn speed: slight vertical slips while turning barely tilt
+  private static final float CAMERA_TILT_FACTOR = 0.4f;
+  private static final float CAMERA_MAX_TILT = 60f * FastMath.DEG_TO_RAD;
   private Spatial player;
   private AnimComposer composer;
   private ChaseCamera chaseCam;
@@ -284,7 +287,13 @@ public class Gamebase extends SimpleApplication {
   public void setupChaseCamera() {
     flyCam.setEnabled(false);
 
-    chaseCam = new ChaseCamera(cam, player, inputManager);
+    // ChaseCamera shares one speed for turning and tilting; scale tilt down on its own
+    chaseCam = new ChaseCamera(cam, player, inputManager) {
+      @Override
+      protected void vRotateCamera(final float value) {
+        super.vRotateCamera(value * CAMERA_TILT_FACTOR);
+      }
+    };
     // No smooth motion: it lerps the distance back slowly, so the camera lags and drifts
     // away while the character runs. Off, it stays at the exact distance every frame.
     chaseCam.setSmoothMotion(false);
@@ -296,6 +305,7 @@ public class Gamebase extends SimpleApplication {
     // This tilts the camera down so you are looking from slightly above.
     // 0.3f to 0.5f is usually a good "over the shoulder" angle.
     chaseCam.setDefaultVerticalRotation(0.2f);
+    chaseCam.setMaxVerticalRotation(CAMERA_MAX_TILT); // default 90 degrees looks straight down
 
     // 3. Distance and Offsets
     chaseCam.setDefaultDistance(6f);
