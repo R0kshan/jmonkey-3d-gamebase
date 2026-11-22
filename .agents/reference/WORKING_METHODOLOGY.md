@@ -24,6 +24,9 @@ type or state, repeated object setup, many objects talking to each other), check
 [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) for a pattern that fits. Use one only when it solves a
 problem the code has today.
 
+For engine code, follow [JMONKEYENGINE.md](JMONKEYENGINE.md). When it is not precise enough,
+read the official jMonkeyEngine documentation or JavaDoc it links to rather than guessing.
+
 ## What counts as a meaningful unit test
 
 - It checks behaviour the feature promises, with concrete inputs and expected outputs.
