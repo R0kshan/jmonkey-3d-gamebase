@@ -9,6 +9,10 @@ Every change is expected to respect them: small focused functions, descriptive n
 constants instead of magic numbers, comments that explain intent rather than repeat the code,
 and the boy scout rule.
 
+Then follow [.agents/reference/WORKING_METHODOLOGY.md](.agents/reference/WORKING_METHODOLOGY.md)
+for every feature: meaningful unit tests that pass, 0 PMD warnings, and a project that compiles,
+all checked before each commit.
+
 ## What this repository is
 
 A 3D game base built with jMonkeyEngine, used to learn and experiment with game development.
@@ -56,7 +60,8 @@ Current state:
 
 - Full check, as CI runs it: `CI=true mvn -B verify`.
   The PMD and SpotBugs profiles only activate when `CI=true` is set, so a plain `mvn verify`
-  can pass locally while CI fails. Always run the `CI=true` form before saying a change is clean.
+  can pass locally while CI fails. Always run the `CI=true` form before committing; see
+  [WORKING_METHODOLOGY.md](.agents/reference/WORKING_METHODOLOGY.md).
 - Run the game: start `org.project.r0kshan.Gamebase` from the IDE. On macOS do not pass
   `-XstartOnFirstThread`; the game switches to the async GLFW build itself.
 
