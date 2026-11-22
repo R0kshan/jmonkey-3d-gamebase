@@ -11,8 +11,10 @@ import com.jme3.asset.plugins.FileLocator;
 import com.jme3.audio.AudioListenerState;
 import com.jme3.input.ChaseCamera;
 import com.jme3.input.KeyInput;
+import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
@@ -56,6 +58,7 @@ public class Gamebase extends SimpleApplication {
   private static final String RIGHT = "Right";
   private static final String SPRINT = "Sprint";
   private static final String JUMP = "Jump";
+  private static final String ADJUST_TILT = "AdjustTilt"; // left mouse held: tilt follows mouse
 
   private static final String IDLE_ANIM = "Idle";
   private static final String RUNNING_ANIM = "Run_03";
@@ -293,7 +296,10 @@ public class Gamebase extends SimpleApplication {
 
       @Override
       protected void vRotateCamera(final float value) {
-        super.vRotateCamera(value * CAMERA_TILT_FACTOR);
+        // Tilt stays at its default angle unless the player holds left click to adjust it
+        if (held.contains(ADJUST_TILT)) {
+          super.vRotateCamera(value * CAMERA_TILT_FACTOR);
+        }
       }
     };
     // No smooth motion: it lerps the distance back slowly, so the camera lags and drifts
@@ -327,7 +333,10 @@ public class Gamebase extends SimpleApplication {
     inputManager.addMapping(SPRINT, new KeyTrigger(KeyInput.KEY_LSHIFT));
     inputManager.addMapping(JUMP, new KeyTrigger(KeyInput.KEY_SPACE));
 
-    inputManager.addListener(actionListener, FORWARD, BACKWARD, LEFT, RIGHT, SPRINT, JUMP);
+    inputManager.addMapping(ADJUST_TILT, new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
+
+    inputManager.addListener(actionListener, FORWARD, BACKWARD, LEFT, RIGHT, SPRINT, JUMP,
+        ADJUST_TILT);
   }
 
   private void updateAnimation() {
