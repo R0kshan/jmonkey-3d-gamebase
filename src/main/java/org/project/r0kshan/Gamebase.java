@@ -68,11 +68,11 @@ public class Gamebase extends SimpleApplication {
   private static final float MOVE_SPEED = 20f;
   private static final float SPRINT_FACTOR = 1.6f;
   // Max character turn rate (radians/second). A constant rate, unlike easing, keeps up
-  // exactly with any mouse turn slower than this; S still turns around in a quarter second.
-  private static final float FACING_TURN_SPEED = 4 * FastMath.PI;
+  // exactly with any mouse turn slower than this; S still turns around in a sixth of a second.
+  private static final float FACING_TURN_SPEED = 6 * FastMath.PI;
   // Camera turn speed per mouse movement (ChaseCamera default is 1): raise it to turn more
   // for the same hand movement
-  private static final float CAMERA_TURN_FACTOR = 3f;
+  private static final float CAMERA_TURN_FACTOR = 5f;
   // Camera tilt speed relative to ChaseCamera default: slight vertical slips barely tilt
   private static final float CAMERA_TILT_FACTOR = 0.2f;
   private static final float CAMERA_MAX_TILT = 60f * FastMath.DEG_TO_RAD;
