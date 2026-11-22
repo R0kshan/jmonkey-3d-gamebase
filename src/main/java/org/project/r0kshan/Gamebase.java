@@ -11,10 +11,8 @@ import com.jme3.asset.plugins.FileLocator;
 import com.jme3.audio.AudioListenerState;
 import com.jme3.input.ChaseCamera;
 import com.jme3.input.KeyInput;
-import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
-import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
@@ -50,16 +48,14 @@ public class Gamebase extends SimpleApplication {
 
   private static final String TITLE = "Gamebase";
   private static final String ASSETS_PATH = "src/main/resources/assets";
-  // MMO-style controls; key codes are physical positions (W = Z on AZERTY)
+  // Action-game controls (Elden Ring / Skyrim style): mouse always looks, WASD moves
+  // relative to the camera. Key codes are physical positions (W = Z on AZERTY).
   private static final String FORWARD = "Forward";
   private static final String BACKWARD = "Backward";
-  private static final String TURN_LEFT = "TurnLeft";
-  private static final String TURN_RIGHT = "TurnRight";
-  private static final String STRAFE_LEFT = "StrafeLeft";
-  private static final String STRAFE_RIGHT = "StrafeRight";
+  private static final String LEFT = "Left";
+  private static final String RIGHT = "Right";
+  private static final String SPRINT = "Sprint";
   private static final String JUMP = "Jump";
-  private static final String ORBIT = "Orbit"; // left mouse: camera only
-  private static final String STEER = "Steer"; // right mouse: camera and character
 
   private static final String IDLE_ANIM = "Idle";
   private static final String RUNNING_ANIM = "Run_03";
@@ -67,15 +63,13 @@ public class Gamebase extends SimpleApplication {
   private static final String MODEL = "model-anim-renamed.glb";
 
   private static final float MOVE_SPEED = 20f;
-  private static final float BACKPEDAL_FACTOR = 0.5f;
-  private static final float TURN_SPEED = FastMath.PI; // radians/second for A/D
-  private static final float CAMERA_FOLLOW_SPEED = 5f; // how fast the camera swings behind
+  private static final float SPRINT_FACTOR = 1.6f;
+  private static final float FACING_TURN_SPEED = 10f; // how fast the character turns to run
   // Camera tilt speed relative to turn speed: slight vertical slips while turning barely tilt
   private static final float CAMERA_TILT_FACTOR = 0.4f;
   private static final float CAMERA_MAX_TILT = 60f * FastMath.DEG_TO_RAD;
   private Spatial player;
   private AnimComposer composer;
-  private ChaseCamera chaseCam;
 
   // Names of the mappings currently held down
   private final Set<String> held = new HashSet<>();
@@ -288,7 +282,7 @@ public class Gamebase extends SimpleApplication {
     flyCam.setEnabled(false);
 
     // ChaseCamera shares one speed for turning and tilting; scale tilt down on its own
-    chaseCam = new ChaseCamera(cam, player, inputManager) {
+    final ChaseCamera chaseCam = new ChaseCamera(cam, player, inputManager) {
       @Override
       protected void vRotateCamera(final float value) {
         super.vRotateCamera(value * CAMERA_TILT_FACTOR);
@@ -311,30 +305,21 @@ public class Gamebase extends SimpleApplication {
     chaseCam.setDefaultDistance(6f);
     chaseCam.setLookAtOffset(new Vector3f(0, 1f, 0)); // Look at head/shoulders
 
-    // 4. Mouse look only while a mouse button is held (cursor hidden meanwhile); a free
-    // mouse leaves the camera alone. Built-in trailing is off: simpleUpdate swings the
-    // camera behind the character itself.
-    chaseCam.setDragToRotate(true);
-    chaseCam.setToggleRotationTrigger(new MouseButtonTrigger(MouseInput.BUTTON_LEFT),
-        new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
+    // 4. Mouse always looks around, no button needed; this also hides the cursor.
+    // Trailing is off: the camera stays where the mouse put it when the character turns.
+    chaseCam.setDragToRotate(false);
     chaseCam.setTrailingEnabled(false);
   }
 
   private void initKeys() {
     inputManager.addMapping(FORWARD, new KeyTrigger(KeyInput.KEY_W));
     inputManager.addMapping(BACKWARD, new KeyTrigger(KeyInput.KEY_S));
-    inputManager.addMapping(TURN_LEFT, new KeyTrigger(KeyInput.KEY_A));
-    inputManager.addMapping(TURN_RIGHT, new KeyTrigger(KeyInput.KEY_D));
-    inputManager.addMapping(STRAFE_LEFT, new KeyTrigger(KeyInput.KEY_Q));
-    inputManager.addMapping(STRAFE_RIGHT, new KeyTrigger(KeyInput.KEY_E));
+    inputManager.addMapping(LEFT, new KeyTrigger(KeyInput.KEY_A));
+    inputManager.addMapping(RIGHT, new KeyTrigger(KeyInput.KEY_D));
+    inputManager.addMapping(SPRINT, new KeyTrigger(KeyInput.KEY_LSHIFT));
     inputManager.addMapping(JUMP, new KeyTrigger(KeyInput.KEY_SPACE));
 
-    // Same buttons the chase camera rotates on; jME lets both mappings share a trigger
-    inputManager.addMapping(ORBIT, new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
-    inputManager.addMapping(STEER, new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
-
-    inputManager.addListener(actionListener, FORWARD, BACKWARD, TURN_LEFT, TURN_RIGHT,
-        STRAFE_LEFT, STRAFE_RIGHT, JUMP, ORBIT, STEER);
+    inputManager.addListener(actionListener, FORWARD, BACKWARD, LEFT, RIGHT, SPRINT, JUMP);
   }
 
   private void updateAnimation() {
@@ -381,23 +366,19 @@ public class Gamebase extends SimpleApplication {
     return movementInput().lengthSquared() > 0;
   }
 
-  /**
-   * Movement in the character's own frame: x = left, z = forward.
-   * A/D strafe instead of turning while right mouse steers; both buttons run forward.
-   */
+  /** Held movement keys as x = left, z = forward, relative to the camera. */
   private Vector3f movementInput() {
-    final boolean steering = held.contains(STEER);
     final Vector3f input = new Vector3f();
-    if (held.contains(FORWARD) || steering && held.contains(ORBIT)) {
+    if (held.contains(FORWARD)) {
       input.z += 1;
     }
     if (held.contains(BACKWARD)) {
       input.z -= 1;
     }
-    if (held.contains(STRAFE_LEFT) || steering && held.contains(TURN_LEFT)) {
+    if (held.contains(LEFT)) {
       input.x += 1;
     }
-    if (held.contains(STRAFE_RIGHT) || steering && held.contains(TURN_RIGHT)) {
+    if (held.contains(RIGHT)) {
       input.x -= 1;
     }
     return input;
@@ -428,45 +409,25 @@ public class Gamebase extends SimpleApplication {
       }
     }
 
-    final boolean steering = held.contains(STEER);
-    final boolean orbiting = held.contains(ORBIT) && !steering;
-
-    float turn = 0;
-    if (!steering && held.contains(TURN_LEFT)) {
-      turn += 1;
-    }
-    if (!steering && held.contains(TURN_RIGHT)) {
-      turn -= 1;
-    }
-
-    // 1. Facing: right mouse locks it to the camera, otherwise A/D turn the character
-    if (steering) {
-      final Vector3f camDir = cam.getDirection().clone().setY(0).normalizeLocal();
-      final Quaternion steerRotation = new Quaternion();
-      steerRotation.lookAt(camDir, Vector3f.UNIT_Y);
-      player.setLocalRotation(steerRotation);
-    } else {
-      player.rotate(0, turn * TURN_SPEED * tpf, 0);
-    }
-
-    // 2. Move relative to the character, walking backward slower without turning around
+    // 1. Camera directions on the ground plane, so looking up or down doesn't lift the run
     final Vector3f input = movementInput();
-    final Vector3f forward = forwardOf(player);
-    if (input.lengthSquared() > 0) {
-      final Vector3f left = Vector3f.UNIT_Y.cross(forward);
-      final Vector3f walk = forward.mult(input.z).addLocal(left.mult(input.x)).normalizeLocal();
-      final float speed = input.z < 0 ? MOVE_SPEED * BACKPEDAL_FACTOR : MOVE_SPEED;
-      player.move(walk.multLocal(speed * tpf));
+    if (input.lengthSquared() == 0) {
+      return;
     }
+    final Vector3f camForward = cam.getDirection().clone().setY(0).normalizeLocal();
+    final Vector3f camLeft = cam.getLeft().clone().setY(0).normalizeLocal();
+    final Vector3f walk = camForward.multLocal(input.z).addLocal(camLeft.multLocal(input.x))
+        .normalizeLocal();
 
-    // 3. Camera swings back behind the character once it moves or turns, unless the
-    // player is orbiting it; standing still keeps a left-drag view of the character.
-    if (!orbiting && !steering && (input.lengthSquared() > 0 || turn != 0)) {
-      final float current = chaseCam.getHorizontalRotation();
-      final float delta = FastMath.normalize(behindAngle(forward) - current,
-          -FastMath.PI, FastMath.PI);
-      chaseCam.setDefaultHorizontalRotation(
-          current + delta * Math.min(1f, CAMERA_FOLLOW_SPEED * tpf));
-    }
+    // 2. Run that way; S turns the character around toward the camera
+    final float speed = held.contains(SPRINT) ? MOVE_SPEED * SPRINT_FACTOR : MOVE_SPEED;
+    player.move(walk.mult(speed * tpf));
+
+    // 3. Turn smoothly to face the run direction
+    final Quaternion target = new Quaternion();
+    target.lookAt(walk, Vector3f.UNIT_Y);
+    final Quaternion rotation = player.getLocalRotation().clone();
+    rotation.slerp(target, Math.min(1f, FACING_TURN_SPEED * tpf));
+    player.setLocalRotation(rotation);
   }
 }
