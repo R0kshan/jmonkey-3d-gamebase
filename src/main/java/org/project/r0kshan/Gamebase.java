@@ -11,8 +11,10 @@ import com.jme3.asset.plugins.FileLocator;
 import com.jme3.audio.AudioListenerState;
 import com.jme3.input.ChaseCamera;
 import com.jme3.input.KeyInput;
+import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
@@ -30,7 +32,9 @@ import com.jme3.texture.Texture;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.prefs.BackingStoreException;
 import lombok.extern.log4j.Log4j2;
 import org.lwjgl.system.Configuration;
@@ -46,11 +50,15 @@ public class Gamebase extends SimpleApplication {
 
   private static final String TITLE = "Gamebase";
   private static final String ASSETS_PATH = "src/main/resources/assets";
-  private static final String RIGHT_KEY = "Right";
-  private static final String LEFT_KEY = "Left";
-  private static final String UP_KEY = "Up";
-  private static final String DOWN_KEY = "Down";
-  private static final String SPACE_KEY = "Space";
+  // Action-game controls (Elden Ring / Skyrim style): mouse always looks, WASD moves
+  // relative to the camera. Key codes are physical positions (W = Z on AZERTY).
+  private static final String FORWARD = "Forward";
+  private static final String BACKWARD = "Backward";
+  private static final String LEFT = "Left";
+  private static final String RIGHT = "Right";
+  private static final String SPRINT = "Sprint";
+  private static final String JUMP = "Jump";
+  private static final String ADJUST_TILT = "AdjustTilt"; // left mouse held: tilt follows mouse
 
   private static final String IDLE_ANIM = "Idle";
   private static final String RUNNING_ANIM = "Run_03";
@@ -58,34 +66,36 @@ public class Gamebase extends SimpleApplication {
   private static final String MODEL = "model-anim-renamed.glb";
 
   private static final float MOVE_SPEED = 20f;
+  private static final float SPRINT_FACTOR = 1.6f;
+  // Max character turn rate (radians/second). A constant rate, unlike easing, keeps up
+  // exactly with any mouse turn slower than this; S still turns around in a sixth of a second.
+  private static final float FACING_TURN_SPEED = 6 * FastMath.PI;
+  // Camera turn speed per mouse movement (ChaseCamera default is 1): raise it to turn more
+  // for the same hand movement
+  private static final float CAMERA_TURN_FACTOR = 5f;
+  // Camera tilt speed while left click is held (ChaseCamera default is 1)
+  private static final float CAMERA_TILT_FACTOR = 0.5f;
+  private static final float CAMERA_MAX_TILT = 60f * FastMath.DEG_TO_RAD;
   private Spatial player;
   private AnimComposer composer;
 
-  private boolean leftIsPressed;
-  private boolean rightIsPressed;
-  private boolean upIsPressed;
-  private boolean downIsPressed;
-  private boolean spaceIsPressed;
+  // Names of the mappings currently held down
+  private final Set<String> held = new HashSet<>();
+  // Seconds left in the current jump; jump plays once per press, not while held
+  private float jumpTimeLeft;
   private final ActionListener actionListener = (name, isPressed, tpf) -> {
 
     if (isPressed) {
       log.info("Key Pressed: {}", name);
     }
 
-    if (LEFT_KEY.equals(name)) {
-      leftIsPressed = isPressed;
+    if (isPressed) {
+      held.add(name);
+    } else {
+      held.remove(name);
     }
-    if (RIGHT_KEY.equals(name)) {
-      rightIsPressed = isPressed;
-    }
-    if (UP_KEY.equals(name)) {
-      upIsPressed = isPressed;
-    }
-    if (DOWN_KEY.equals(name)) {
-      downIsPressed = isPressed;
-    }
-    if (SPACE_KEY.equals(name)) {
-      spaceIsPressed = isPressed;
+    if (JUMP.equals(name) && isPressed && jumpTimeLeft <= 0) {
+      startJump();
     }
     // Update animation state
     updateAnimation();
@@ -279,37 +289,56 @@ public class Gamebase extends SimpleApplication {
   public void setupChaseCamera() {
     flyCam.setEnabled(false);
 
-    final ChaseCamera chaseCam = new ChaseCamera(cam, player, inputManager);
-    chaseCam.setSmoothMotion(true);
+    // ChaseCamera shares one speed for turning and tilting; scale each on its own
+    final ChaseCamera chaseCam = new ChaseCamera(cam, player, inputManager) {
+      @Override
+      protected void rotateCamera(final float value) {
+        super.rotateCamera(value * CAMERA_TURN_FACTOR);
+      }
 
-    // 1. Horizontal Rotation:
-    // If you see the front now, change FastMath.PI to 0.
-    // If you see the side, try FastMath.HALF_PI (90 degrees).
-    chaseCam.setDefaultHorizontalRotation(0);
+      @Override
+      protected void vRotateCamera(final float value) {
+        // Tilt stays at its default angle unless the player holds left click to adjust it
+        if (held.contains(ADJUST_TILT)) {
+          super.vRotateCamera(value * CAMERA_TILT_FACTOR);
+        }
+      }
+    };
+    // No smooth motion: it lerps the distance back slowly, so the camera lags and drifts
+    // away while the character runs. Off, it stays at the exact distance every frame.
+    chaseCam.setSmoothMotion(false);
+
+    // 1. Horizontal Rotation: start right behind the character
+    chaseCam.setDefaultHorizontalRotation(behindAngle(forwardOf(player)));
 
     // 2. Vertical Rotation:
     // This tilts the camera down so you are looking from slightly above.
     // 0.3f to 0.5f is usually a good "over the shoulder" angle.
     chaseCam.setDefaultVerticalRotation(0.2f);
+    chaseCam.setMaxVerticalRotation(CAMERA_MAX_TILT); // default 90 degrees looks straight down
 
     // 3. Distance and Offsets
     chaseCam.setDefaultDistance(6f);
     chaseCam.setLookAtOffset(new Vector3f(0, 1f, 0)); // Look at head/shoulders
 
-    // 4. Trailing:
-    // This ensures the camera stays behind the player when they turn.
-    chaseCam.setTrailingEnabled(true);
-    chaseCam.setChasingSensitivity(5f);
+    // 4. Mouse always looks around, no button needed; this also hides the cursor.
+    // Trailing is off: the camera stays where the mouse put it when the character turns.
+    chaseCam.setDragToRotate(false);
+    chaseCam.setTrailingEnabled(false);
   }
 
   private void initKeys() {
-    inputManager.addMapping(UP_KEY, new KeyTrigger(KeyInput.KEY_W)); // Physical Z on AZERTY
-    inputManager.addMapping(LEFT_KEY, new KeyTrigger(KeyInput.KEY_A)); // Physical Q on AZERTY
-    inputManager.addMapping(DOWN_KEY, new KeyTrigger(KeyInput.KEY_S)); // Physical S
-    inputManager.addMapping(RIGHT_KEY, new KeyTrigger(KeyInput.KEY_D)); // Physical D
-    inputManager.addMapping(SPACE_KEY, new KeyTrigger(KeyInput.KEY_SPACE));
+    inputManager.addMapping(FORWARD, new KeyTrigger(KeyInput.KEY_W));
+    inputManager.addMapping(BACKWARD, new KeyTrigger(KeyInput.KEY_S));
+    inputManager.addMapping(LEFT, new KeyTrigger(KeyInput.KEY_A));
+    inputManager.addMapping(RIGHT, new KeyTrigger(KeyInput.KEY_D));
+    inputManager.addMapping(SPRINT, new KeyTrigger(KeyInput.KEY_LSHIFT));
+    inputManager.addMapping(JUMP, new KeyTrigger(KeyInput.KEY_SPACE));
 
-    inputManager.addListener(actionListener, LEFT_KEY, RIGHT_KEY, UP_KEY, DOWN_KEY, SPACE_KEY);
+    inputManager.addMapping(ADJUST_TILT, new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
+
+    inputManager.addListener(actionListener, FORWARD, BACKWARD, LEFT, RIGHT, SPRINT, JUMP,
+        ADJUST_TILT);
   }
 
   private void updateAnimation() {
@@ -323,8 +352,7 @@ public class Gamebase extends SimpleApplication {
 
     // Determine which animation we WANT to play
     String desiredAnim = isMoving() ? RUNNING_ANIM : IDLE_ANIM;
-    if (spaceIsPressed) {
-      log.info("Space is pressed");
+    if (jumpTimeLeft > 0) {
       desiredAnim = JUMP_ANIM;
     }
 
@@ -343,8 +371,55 @@ public class Gamebase extends SimpleApplication {
     }
   }
 
+  private void startJump() {
+    if (composer == null || composer.getAnimClip(JUMP_ANIM) == null) {
+      return;
+    }
+    jumpTimeLeft = (float) composer.getAnimClip(JUMP_ANIM).getLength();
+    // Restart the clip from frame 0 even if it was the last action played
+    composer.setCurrentAction(JUMP_ANIM);
+    composer.setTime(0);
+  }
+
   private boolean isMoving() {
-    return upIsPressed || downIsPressed || leftIsPressed || rightIsPressed;
+    return movementInput().lengthSquared() > 0;
+  }
+
+  /** Held movement keys as x = left, z = forward, relative to the camera. */
+  private Vector3f movementInput() {
+    final Vector3f input = new Vector3f();
+    if (held.contains(FORWARD)) {
+      input.z += 1;
+    }
+    if (held.contains(BACKWARD)) {
+      input.z -= 1;
+    }
+    if (held.contains(LEFT)) {
+      input.x += 1;
+    }
+    if (held.contains(RIGHT)) {
+      input.x -= 1;
+    }
+    return input;
+  }
+
+  /** Character facing on the ground plane (models face +Z). */
+  private static Vector3f forwardOf(final Spatial spatial) {
+    return spatial.getLocalRotation().mult(Vector3f.UNIT_Z).setY(0).normalizeLocal();
+  }
+
+  /**
+   * ChaseCamera horizontal angle that puts the camera behind a character facing forward.
+   * ChaseCamera places the camera at (cos a, sin a) on the XZ plane around the target.
+   */
+  static float behindAngle(final Vector3f forward) {
+    return FastMath.atan2(-forward.z, -forward.x);
+  }
+
+  /** Steps a yaw angle toward a target the short way round, by at most maxStep radians. */
+  static float turnToward(final float yaw, final float targetYaw, final float maxStep) {
+    final float delta = FastMath.normalize(targetYaw - yaw, -FastMath.PI, FastMath.PI);
+    return yaw + FastMath.clamp(delta, -maxStep, maxStep);
   }
 
   @Override
@@ -352,38 +427,31 @@ public class Gamebase extends SimpleApplication {
     if (player == null) {
       return;
     }
-    // 1. Get the camera direction, but ignore the Y (up/down) axis
-    // so the character doesn't fly into the air when looking up.
-    final Vector3f camDir = cam.getDirection().clone().setY(0).normalizeLocal();
+    if (jumpTimeLeft > 0) {
+      jumpTimeLeft -= tpf;
+      if (jumpTimeLeft <= 0) {
+        updateAnimation(); // back to idle/run once the jump clip has played
+      }
+    }
+
+    // 1. Camera directions on the ground plane, so looking up or down doesn't lift the run
+    final Vector3f input = movementInput();
+    if (input.lengthSquared() == 0) {
+      return;
+    }
+    final Vector3f camForward = cam.getDirection().clone().setY(0).normalizeLocal();
     final Vector3f camLeft = cam.getLeft().clone().setY(0).normalizeLocal();
-    final Vector3f walkDirection = new Vector3f(0, 0, 0);
+    final Vector3f walk = camForward.multLocal(input.z).addLocal(camLeft.multLocal(input.x))
+        .normalizeLocal();
 
-    // 2. Calculate direction based on which keys are held
-    if (upIsPressed) {
-      walkDirection.addLocal(camDir);
-    }
-    if (downIsPressed) {
-      walkDirection.subtractLocal(camDir);
-    }
-    if (leftIsPressed) {
-      walkDirection.addLocal(camLeft);
-    }
-    if (rightIsPressed) {
-      walkDirection.subtractLocal(camLeft);
-    }
+    // 2. Run that way; S turns the character around toward the camera
+    final float speed = held.contains(SPRINT) ? MOVE_SPEED * SPRINT_FACTOR : MOVE_SPEED;
+    player.move(walk.mult(speed * tpf));
 
-    // 3. If any key is pressed, move and rotate
-    if (walkDirection.length() > 0) {
-      walkDirection.normalizeLocal();
-
-      // Move the player spatial
-      player.move(walkDirection.mult(MOVE_SPEED * tpf));
-
-      // Make the player face the direction they are walking
-      // We use slerp for smooth rotation (optional, but looks better)
-      final Quaternion lookRotation = new Quaternion();
-      lookRotation.lookAt(walkDirection, Vector3f.UNIT_Y);
-      player.getLocalRotation().slerp(lookRotation, 10f * tpf);
-    }
+    // 3. Turn smoothly to face the run direction
+    final Vector3f facing = forwardOf(player);
+    final float yaw = turnToward(FastMath.atan2(facing.x, facing.z),
+        FastMath.atan2(walk.x, walk.z), FACING_TURN_SPEED * tpf);
+    player.setLocalRotation(new Quaternion().fromAngleAxis(yaw, Vector3f.UNIT_Y));
   }
 }
