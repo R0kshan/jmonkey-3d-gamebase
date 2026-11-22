@@ -73,8 +73,8 @@ public class Gamebase extends SimpleApplication {
   // Camera turn speed per mouse movement (ChaseCamera default is 1): raise it to turn more
   // for the same hand movement
   private static final float CAMERA_TURN_FACTOR = 5f;
-  // Camera tilt speed relative to ChaseCamera default: slight vertical slips barely tilt
-  private static final float CAMERA_TILT_FACTOR = 0.2f;
+  // Camera tilt speed while left click is held (ChaseCamera default is 1)
+  private static final float CAMERA_TILT_FACTOR = 0.5f;
   private static final float CAMERA_MAX_TILT = 60f * FastMath.DEG_TO_RAD;
   private Spatial player;
   private AnimComposer composer;
